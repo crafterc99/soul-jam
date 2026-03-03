@@ -13,34 +13,24 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     this.selectedIndex = 0;
 
-    // Background - use loading screen as menu bg
-    const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'loading-screen');
-    bg.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
-    bg.setAlpha(0.4);
+    // Loading screen IS the menu screen - show at full opacity
+    if (this.textures.exists('loading-screen')) {
+      const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'loading-screen');
+      bg.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+    }
 
-    this.add.text(GAME_WIDTH / 2, 120, 'SOUL JAM', {
-      fontSize: '80px',
-      color: '#ff4400',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 6,
-    }).setOrigin(0.5);
+    // Slight darken at bottom for menu readability
+    const gradient = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 120, GAME_WIDTH, 280, 0x000000, 0.5);
 
-    this.add.text(GAME_WIDTH / 2, 200, '16-BIT EDITION', {
-      fontSize: '28px',
-      color: '#ffcc00',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 3,
-    }).setOrigin(0.5);
-
+    // Menu options positioned in lower portion
     this.menuItems = this.options.map((label, i) => {
-      const text = this.add.text(GAME_WIDTH / 2, 380 + i * 80, label, {
+      const text = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 180 + i * 70, label, {
         fontSize: '40px',
+        fontFamily: 'monospace',
         color: '#ffffff',
         fontStyle: 'bold',
         stroke: '#000000',
-        strokeThickness: 4,
+        strokeThickness: 5,
       }).setOrigin(0.5);
       text.setInteractive({ useHandCursor: true });
       text.on('pointerdown', () => this.selectOption(i));
@@ -53,9 +43,10 @@ export class MenuScene extends Phaser.Scene {
 
     this.updateSelection();
 
-    // Blinking "PRESS START" vibe
-    const pressText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 60, '.. PRESS SPACE ..', {
-      fontSize: '20px',
+    // Blinking "PRESS SPACE"
+    const pressText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 30, '.. PRESS SPACE ..', {
+      fontSize: '16px',
+      fontFamily: 'monospace',
       color: '#ffcc00',
       stroke: '#000000',
       strokeThickness: 2,

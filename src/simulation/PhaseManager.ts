@@ -43,6 +43,12 @@ export class PhaseManager {
         }
         break;
 
+      case GamePhase.Violation:
+        if (this.phaseTimer >= 1.5) {
+          return GamePhase.CheckBall;
+        }
+        break;
+
       // Live, Shooting, GameOver - no auto-transition
     }
 

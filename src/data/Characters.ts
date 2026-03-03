@@ -22,6 +22,8 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     title: 'Tribe Elite',
     color: 0xff44aa,
     spriteKey: 'char-breezy',
+    dribbleAnimKey: 'breezy-dribble-anim',
+    idleDribbleAnimKey: 'breezy-idle-dribble-anim',
     ratings: {
       speed: 75,
       power: 82,

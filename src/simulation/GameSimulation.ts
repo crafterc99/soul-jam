@@ -13,6 +13,8 @@ import { SeparationModel, SeparationContext } from './models/SeparationModel';
 import { CharacterDef } from '../data/CharacterRatings';
 import {
   PLAYER_RADIUS, POINTS_TWO, POINTS_THREE,
+  COURT_LEFT, COURT_RIGHT, COURT_TOP, COURT_BOTTOM,
+  CROSSOVER_SHIFT_DISTANCE,
 } from '../config/Constants';
 
 export class GameSimulation {
@@ -27,6 +29,7 @@ export class GameSimulation {
   lastTimingGrade: string = '';
   lastShotPoints: number = 0;
   lastScorerIndex: number = -1;
+  lastViolationPlayer: number = -1;
 
   constructor(p1Char: CharacterDef, p2Char: CharacterDef) {
     this.court = new CourtSim();
@@ -42,7 +45,6 @@ export class GameSimulation {
       new PlayerSim(1, defensePos, p2Char.ratings, p2Char.color),
     ];
 
-    // P1 starts with ball
     this.players[0].hasBall = true;
     this.ball.setPossessor(0, this.players[0].position);
     this.phaseManager.possession = 0;
@@ -58,7 +60,6 @@ export class GameSimulation {
   }
 
   tick(dt: number, p1Input: IPlayerInput, p2Input: IPlayerInput): void {
-    // Set inputs
     this.players[0].setInput(p1Input);
     this.players[1].setInput(p2Input);
 
@@ -68,7 +69,6 @@ export class GameSimulation {
       this.transitionToPhase(nextPhase);
     }
 
-    // Phase-specific logic
     switch (this.phaseManager.phase) {
       case GamePhase.CheckBall:
         this.tickCheckBall(dt);
@@ -84,13 +84,13 @@ export class GameSimulation {
         break;
       case GamePhase.Scored:
       case GamePhase.Missed:
-        // Just wait for timer
+      case GamePhase.Violation:
         break;
       case GamePhase.GameOver:
         break;
     }
 
-    // Clamp positions to court
+    // Clamp positions to court (but check OOB first during live play)
     for (const player of this.players) {
       player.position = this.court.clampPlayerPosition(player.position);
     }
@@ -105,11 +105,9 @@ export class GameSimulation {
   }
 
   private tickCheckBall(dt: number): void {
-    // Players move to positions
     const offense = this.offensePlayer;
     const defense = this.defensePlayer;
 
-    // Offense gets ball, both can move freely
     offense.hasBall = true;
     defense.hasBall = false;
     this.ball.setPossessor(offense.playerIndex, offense.position);
@@ -119,7 +117,6 @@ export class GameSimulation {
   }
 
   private tickInbound(dt: number): void {
-    // Brief transition, players can't shoot yet
     const offense = this.offensePlayer;
     const defense = this.defensePlayer;
     offense.update(dt);
@@ -133,16 +130,25 @@ export class GameSimulation {
 
     // Handle stepback
     if (offenseInput.stepbackPressed && offense.hasBall &&
-        offense.fsm.isInState(PLAYER_STATE.IDLE) || offense.fsm.isInState(PLAYER_STATE.RUN)) {
-      if (offenseInput.stepbackPressed && offense.hasBall && !offense.fsm.isInState(PLAYER_STATE.STEPBACK)) {
-        this.executeStepback(offense, defense);
-      }
+        !offense.fsm.isInState(PLAYER_STATE.STEPBACK) &&
+        !offense.fsm.isInState(PLAYER_STATE.CROSSOVER) &&
+        !offense.fsm.isInState(PLAYER_STATE.SHOOTING)) {
+      this.executeStepback(offense, defense);
+    }
+
+    // Handle crossover
+    if (offenseInput.crossoverPressed && offense.hasBall &&
+        !offense.fsm.isInState(PLAYER_STATE.STEPBACK) &&
+        !offense.fsm.isInState(PLAYER_STATE.CROSSOVER) &&
+        !offense.fsm.isInState(PLAYER_STATE.SHOOTING)) {
+      this.executeCrossover(offense, defense);
     }
 
     // Handle shoot press
     if (offenseInput.shootPressed && offense.hasBall &&
         !offense.fsm.isInState(PLAYER_STATE.SHOOTING) &&
-        !offense.fsm.isInState(PLAYER_STATE.STEPBACK)) {
+        !offense.fsm.isInState(PLAYER_STATE.STEPBACK) &&
+        !offense.fsm.isInState(PLAYER_STATE.CROSSOVER)) {
       offense.fsm.setState(PLAYER_STATE.SHOOTING);
     }
 
@@ -155,13 +161,16 @@ export class GameSimulation {
     offense.update(dt);
     defense.update(dt);
 
-    // Player collision (prevent overlapping)
+    // Player collision
     this.resolvePlayerCollision();
+
+    // Out of bounds check on ball handler
+    this.checkOutOfBounds();
   }
 
   private tickShooting(dt: number): void {
-    // Ball is in flight, check if it landed
-    if (this.ball.state === 'dead') {
+    // Wait for ball to finish its full animation (flight + drop/bounce)
+    if (this.ball.shotFinished) {
       if (this.ball.willScore) {
         this.scoreKeeper.addScore(this.phaseManager.possession, this.lastShotPoints);
         this.lastScorerIndex = this.phaseManager.possession;
@@ -169,20 +178,38 @@ export class GameSimulation {
         if (this.scoreKeeper.isGameOver()) {
           this.transitionToPhase(GamePhase.GameOver);
         } else {
-          // After a score, defender gets possession
           this.phaseManager.flipPossession();
           this.transitionToPhase(GamePhase.Scored);
         }
       } else {
-        // Miss - defender gets the rebound
         this.phaseManager.flipPossession();
         this.transitionToPhase(GamePhase.Missed);
       }
     }
 
-    // Players can still move during flight
     this.players[0].update(dt);
     this.players[1].update(dt);
+  }
+
+  private checkOutOfBounds(): void {
+    const offense = this.offensePlayer;
+    if (!offense.hasBall) return;
+
+    const pos = offense.position;
+    const margin = PLAYER_RADIUS;
+    const oobMargin = 2; // small buffer so they don't trigger right at the edge
+
+    const isOOB =
+      pos.x <= COURT_LEFT + margin + oobMargin ||
+      pos.x >= COURT_RIGHT - margin - oobMargin ||
+      pos.y <= COURT_TOP + margin + oobMargin ||
+      pos.y >= COURT_BOTTOM - margin - oobMargin;
+
+    if (isOOB) {
+      this.lastViolationPlayer = offense.playerIndex;
+      this.phaseManager.flipPossession();
+      this.transitionToPhase(GamePhase.Violation);
+    }
   }
 
   private executeStepback(offense: PlayerSim, defense: PlayerSim): void {
@@ -193,17 +220,41 @@ export class GameSimulation {
     };
     const result = SeparationModel.calculate(sepCtx);
 
-    // Stepback direction: away from hoop
     const awayFromHoop = offense.position.subtract(this.court.hoopPosition).normalize();
     offense.stepbackVelocity = awayFromHoop.scale(result.burstVelocity);
     offense.fsm.setState(PLAYER_STATE.STEPBACK);
+  }
+
+  private executeCrossover(offense: PlayerSim, defense: PlayerSim): void {
+    // Calculate perpendicular direction to offense→hoop vector
+    const toHoop = this.court.hoopPosition.subtract(offense.position).normalize();
+    const perpendicular = new Vector2(-toHoop.y, toHoop.x); // rotate 90 degrees
+
+    // Choose side based on offense facing angle
+    const facingDir = Vector2.fromAngle(offense.facingAngle, 1);
+    const dot = facingDir.x * perpendicular.x + facingDir.y * perpendicular.y;
+    const defenderShiftDir = dot >= 0 ? perpendicular : perpendicular.scale(-1);
+
+    // Scale by ball handling vs defense ratings
+    const handlingFactor = offense.ratings.steal / 100;
+    const defenseFactor = defense.ratings.defense / 100;
+    const effectiveness = 0.5 + 0.5 * (handlingFactor - defenseFactor * 0.6);
+    const clampedEffect = Math.max(0.3, Math.min(1.0, effectiveness));
+
+    // Push defender sideways
+    const shiftAmount = CROSSOVER_SHIFT_DISTANCE * clampedEffect;
+    defense.position = defense.position.add(defenderShiftDir.scale(shiftAmount));
+
+    // Give offense a small burst in the opposite direction
+    const offenseBurst = defenderShiftDir.scale(-120 * clampedEffect);
+    offense.crossoverVelocity = offenseBurst;
+    offense.fsm.setState(PLAYER_STATE.CROSSOVER);
   }
 
   private executeShot(offense: PlayerSim, defense: PlayerSim): void {
     const distToHoop = this.court.distanceToHoop(offense.position);
     const isBehindThree = this.court.isBehindThreePointLine(offense.position);
 
-    // Calculate contest
     const defCtx: DefenseContext = {
       defenderPosition: defense.position,
       shooterPosition: offense.position,
@@ -214,7 +265,6 @@ export class GameSimulation {
     const contestPercent = DefenseModel.calculateContestPercent(defCtx);
     this.lastContestPercent = contestPercent;
 
-    // Calculate shot probability
     const shotCtx: ShotContext = {
       distanceToHoop: distToHoop,
       contestPercent,
@@ -226,10 +276,8 @@ export class GameSimulation {
     this.lastTimingGrade = ShotModel.getTimingGrade(offense.shotTimingValue);
     this.lastShotPoints = isBehindThree ? POINTS_THREE : POINTS_TWO;
 
-    // Roll the shot
     const willScore = ShotModel.rollShot(probability);
 
-    // Launch ball
     offense.hasBall = false;
     this.ball.launchShot(offense.position, this.court.hoopPosition, willScore);
 
@@ -263,15 +311,8 @@ export class GameSimulation {
         this.ball.setPossessor(this.offensePlayer.playerIndex, offPos);
         break;
       }
-      case GamePhase.Inbound:
-        break;
-      case GamePhase.Live:
-        break;
-      case GamePhase.Scored:
-        break;
-      case GamePhase.Missed:
-        break;
-      case GamePhase.GameOver:
+      case GamePhase.Violation:
+        // Ball handler went out of bounds - possession flipped already
         break;
     }
   }

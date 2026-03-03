@@ -1,12 +1,14 @@
 import { State } from './StateMachine';
 import { PlayerSim } from './PlayerSim';
 import { MovementModel } from './models/MovementModel';
+import { CROSSOVER_DURATION } from '../config/Constants';
 
 export const PLAYER_STATE = {
   IDLE: 'idle',
   RUN: 'run',
   DEFENDING: 'defending',
   STEPBACK: 'stepback',
+  CROSSOVER: 'crossover',
   SHOOTING: 'shooting',
 } as const;
 
@@ -127,6 +129,29 @@ export class StepbackState implements State<PlayerSim> {
     const speedCurve = 1 - progress; // decelerate over time
     const stepVel = player.stepbackVelocity.scale(speedCurve);
     player.position = player.position.add(stepVel.scale(dt));
+  }
+}
+
+export class CrossoverState implements State<PlayerSim> {
+  name = PLAYER_STATE.CROSSOVER;
+
+  enter(player: PlayerSim): void {
+    player.stateTimer = 0;
+  }
+
+  update(player: PlayerSim, dt: number): void {
+    player.stateTimer += dt;
+
+    if (player.stateTimer >= CROSSOVER_DURATION) {
+      player.fsm.setState(PLAYER_STATE.IDLE);
+      return;
+    }
+
+    // During crossover, apply a small lateral burst to the offense
+    const progress = player.stateTimer / CROSSOVER_DURATION;
+    const speedCurve = 1 - progress;
+    const crossVel = player.crossoverVelocity.scale(speedCurve);
+    player.position = player.position.add(crossVel.scale(dt));
   }
 }
 

@@ -3,7 +3,7 @@ import { CharacterRatings } from '../data/CharacterRatings';
 import { IPlayerInput } from '../input/IPlayerInput';
 import { StateMachine } from './StateMachine';
 import {
-  IdleState, RunState, DefendingState, StepbackState, ShootingState,
+  IdleState, RunState, DefendingState, StepbackState, CrossoverState, ShootingState,
   PLAYER_STATE,
 } from './PlayerStates';
 import { STEPBACK_DURATION } from '../config/Constants';
@@ -25,6 +25,7 @@ export class PlayerSim {
   stateTimer: number = 0;
   stepbackDuration: number = STEPBACK_DURATION;
   stepbackVelocity: Vector2 = Vector2.zero();
+  crossoverVelocity: Vector2 = Vector2.zero();
 
   // Shooting
   shotReleased: boolean = false;
@@ -41,6 +42,7 @@ export class PlayerSim {
     this.fsm.addState(new RunState());
     this.fsm.addState(new DefendingState());
     this.fsm.addState(new StepbackState());
+    this.fsm.addState(new CrossoverState());
     this.fsm.addState(new ShootingState());
     this.fsm.setState(PLAYER_STATE.IDLE);
   }

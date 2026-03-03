@@ -5,6 +5,7 @@ export enum GamePhase {
   Shooting = 'shooting',
   Scored = 'scored',
   Missed = 'missed',
+  Violation = 'violation',
   GameOver = 'gameOver',
 }
 

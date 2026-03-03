@@ -13,5 +13,7 @@ export interface CharacterDef {
   title: string;             // subtitle (e.g. "Soul Guard")
   color: number;             // fallback rectangle color
   spriteKey: string;         // asset key for character sprite
+  dribbleAnimKey?: string;       // running dribble animation
+  idleDribbleAnimKey?: string;   // standing/idle dribble animation
   ratings: CharacterRatings;
 }

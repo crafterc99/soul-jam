@@ -7,7 +7,7 @@ import { PlayerSim } from '../simulation/PlayerSim';
 import { Vector2 } from '../utils/Vector2';
 import { THREE_POINT_RADIUS, HOOP_X, HOOP_Y } from '../config/Constants';
 
-type AIState = 'idle' | 'drive' | 'position' | 'stepback' | 'shoot_windup' | 'shoot_release' | 'defend' | 'defend_close';
+type AIState = 'idle' | 'drive' | 'position' | 'stepback' | 'crossover' | 'shoot_windup' | 'shoot_release' | 'defend' | 'defend_close';
 
 export class AIController {
   private personality: AIPersonality;
@@ -91,8 +91,8 @@ export class AIController {
       return;
     }
 
-    // Can't act during stepback
-    if (me.fsm.isInState(PLAYER_STATE.STEPBACK)) {
+    // Can't act during stepback or crossover
+    if (me.fsm.isInState(PLAYER_STATE.STEPBACK) || me.fsm.isInState(PLAYER_STATE.CROSSOVER)) {
       return;
     }
 
@@ -112,13 +112,26 @@ export class AIController {
       return;
     }
 
-    // Step 2: In range. If defender is close, consider stepback
-    if (distToDefender < 55 && Math.random() < this.personality.aggression * 0.4 &&
-        !me.fsm.isInState(PLAYER_STATE.STEPBACK)) {
-      input.stepbackPressed = true;
-      this.aiState = 'stepback';
-      this.decisionTimer = 0.5; // wait after stepback
-      return;
+    // Step 2: In range. If defender is close, consider stepback or crossover
+    if (distToDefender < 55 && !me.fsm.isInState(PLAYER_STATE.STEPBACK) && !me.fsm.isInState(PLAYER_STATE.CROSSOVER)) {
+      // Crossover when defender is in the driving lane (between offense and hoop)
+      const toHoop = hoopPos.subtract(me.position).normalize();
+      const toDefender = opponent.position.subtract(me.position).normalize();
+      const inLane = toHoop.x * toDefender.x + toHoop.y * toDefender.y;
+
+      if (inLane > 0.4 && Math.random() < this.personality.aggression * 0.35) {
+        input.crossoverPressed = true;
+        this.aiState = 'crossover';
+        this.decisionTimer = 0.4;
+        return;
+      }
+
+      if (Math.random() < this.personality.aggression * 0.4) {
+        input.stepbackPressed = true;
+        this.aiState = 'stepback';
+        this.decisionTimer = 0.5;
+        return;
+      }
     }
 
     // Step 3: Decide to shoot
@@ -142,7 +155,7 @@ export class AIController {
     this.aiState = 'position';
     // Pick a stable spot instead of random jitter each frame
     if (this.targetPosition.lengthSquared() === 0 || me.position.distanceTo(this.targetPosition) < 15) {
-      const angle = -Math.PI * 0.5 + Math.random() * Math.PI; // arc from top to bottom
+      const angle = -Math.PI * 0.4 + Math.random() * Math.PI * 0.8; // arc on right side of hoop
       const dist = THREE_POINT_RADIUS * (0.5 + Math.random() * 0.3);
       this.targetPosition = hoopPos.add(Vector2.fromAngle(angle, dist));
     }

@@ -62,8 +62,8 @@ export class GameScene extends Phaser.Scene {
     // Setup renderers
     this.courtRenderer = new CourtRenderer(this);
     this.playerRenderers = [
-      new PlayerRenderer(this, this.sim.players[0], `P1 ${p1Char.name}`, p1Char.spriteKey),
-      new PlayerRenderer(this, this.sim.players[1], `P2 ${p2Char.name}`, p2Char.spriteKey),
+      new PlayerRenderer(this, this.sim.players[0], `P1 ${p1Char.name}`, p1Char.spriteKey, p1Char.dribbleAnimKey, p1Char.idleDribbleAnimKey),
+      new PlayerRenderer(this, this.sim.players[1], `P2 ${p2Char.name}`, p2Char.spriteKey, p2Char.dribbleAnimKey, p2Char.idleDribbleAnimKey),
     ];
     this.ballRenderer = new BallRenderer(this, this.sim.ball);
     this.hudRenderer = new HUDRenderer(this, this.sim);
@@ -101,6 +101,11 @@ export class GameScene extends Phaser.Scene {
     // Update renderers
     this.playerRenderers[0].update();
     this.playerRenderers[1].update();
+
+    // Hide the separate ball when a dribble animation is showing it
+    const possessorIdx = this.sim.ball.possessorIndex;
+    this.ballRenderer.hidden = this.sim.ball.state === 'held' &&
+      this.playerRenderers[possessorIdx].isDribbleAnimActive;
     this.ballRenderer.update();
     this.hudRenderer.update(dt);
 

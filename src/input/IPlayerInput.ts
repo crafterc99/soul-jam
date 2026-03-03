@@ -5,6 +5,7 @@ export interface IPlayerInput {
   shootHeld: boolean;      // while held (timing meter)
   shootReleased: boolean;  // frame button released (triggers shot)
   stepbackPressed: boolean;
+  crossoverPressed: boolean;
   defenseStance: boolean;  // held modifier
   pausePressed: boolean;
 }
@@ -17,6 +18,7 @@ export function emptyInput(): IPlayerInput {
     shootHeld: false,
     shootReleased: false,
     stepbackPressed: false,
+    crossoverPressed: false,
     defenseStance: false,
     pausePressed: false,
   };
