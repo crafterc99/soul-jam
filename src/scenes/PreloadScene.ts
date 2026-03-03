@@ -35,10 +35,12 @@ export class PreloadScene extends Phaser.Scene {
       progressBox.destroy();
     });
 
-    // No assets to load yet - will add in Phase 4
-    // For now, simulate a brief load
-    // Add a tiny dummy load so the progress bar shows
-    this.load.image('__dummy', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+    // Load game assets
+    this.load.image('court', 'assets/images/court.webp');
+    this.load.image('loading-screen', 'assets/images/loading-screen.webp');
+    this.load.image('playerselect-bg', 'assets/images/playerselect.jpg');
+    this.load.image('char-99', 'assets/images/99full.webp');
+    this.load.image('char-breezy', 'assets/images/breezyfull.webp');
   }
 
   create(): void {

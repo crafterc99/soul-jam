@@ -6,14 +6,17 @@ export class BootScene extends Phaser.Scene {
     super({ key: SCENE_BOOT });
   }
 
-  create(): void {
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'SOUL JAM', {
-      fontSize: '64px',
-      color: '#ff6600',
-      fontStyle: 'bold',
-    }).setOrigin(0.5);
+  preload(): void {
+    // Load only the splash screen here so it shows immediately
+    this.load.image('loading-screen', 'assets/images/loading-screen.webp');
+  }
 
-    this.time.delayedCall(1500, () => {
+  create(): void {
+    // Show splash screen
+    const splash = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'loading-screen');
+    splash.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+
+    this.time.delayedCall(2000, () => {
       this.scene.start(SCENE_PRELOAD);
     });
   }

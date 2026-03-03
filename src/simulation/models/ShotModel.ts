@@ -11,23 +11,20 @@ export interface ShotContext {
 
 export class ShotModel {
   static calculateProbability(ctx: ShotContext): number {
-    // Base probability from shot rating (50-85 rating -> 0.40-0.70 base)
-    const baseProbability = 0.20 + (ctx.ratings.shotRating / 100) * 0.55;
+    // Base probability from range rating
+    const baseProbability = 0.20 + (ctx.ratings.range / 100) * 0.55;
 
-    // Distance penalty: more distance = harder shot
-    // Close range (< 100): no penalty
-    // Mid range (100-280): gradual penalty
-    // Three point (> 280): steeper penalty
+    // Distance penalty
     let distancePenalty = 0;
     if (ctx.distanceToHoop > 100) {
       distancePenalty = (ctx.distanceToHoop - 100) / 500 * 0.25;
     }
     if (ctx.distanceToHoop > THREE_POINT_RADIUS) {
-      distancePenalty += 0.08; // extra three-point penalty
+      distancePenalty += 0.08;
     }
 
-    // Contest penalty, mitigated by contestResistance
-    const resistanceFactor = 1 - (ctx.ratings.contestResistance / 100) * 0.6;
+    // Contest penalty, mitigated by clutchEnergy
+    const resistanceFactor = 1 - (ctx.ratings.clutchEnergy / 100) * 0.6;
     const contestPenalty = ctx.contestPercent * 0.35 * resistanceFactor;
 
     // Timing bonus

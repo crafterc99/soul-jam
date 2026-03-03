@@ -20,10 +20,12 @@ export const THREE_POINT_RADIUS = 280;
 
 // Player physics
 export const PLAYER_RADIUS = 20;
-export const DECELERATION = 800; // units/s^2
-export const LATERAL_SPEED_MULTIPLIER = 3; // lateralQuickness * this
-export const MAX_SPEED_MULTIPLIER = 5; // speed * this
-export const ACCEL_MULTIPLIER = 10; // acceleration * this
+export const DECELERATION = 1400; // units/s^2 (higher = snappier stops)
+export const FRICTION = 0.88; // velocity multiplier each frame when no input
+export const LATERAL_SPEED_MULTIPLIER = 2.5; // defense * this = lateral cap
+export const MAX_SPEED_MULTIPLIER = 4.5; // speed * this = top speed
+export const ACCEL_MULTIPLIER = 12; // power * this = acceleration
+export const TURN_SPEED_PENALTY = 0.7; // speed penalty when changing direction sharply
 
 // Ball
 export const BALL_RADIUS = 10;

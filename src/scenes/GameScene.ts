@@ -62,8 +62,8 @@ export class GameScene extends Phaser.Scene {
     // Setup renderers
     this.courtRenderer = new CourtRenderer(this);
     this.playerRenderers = [
-      new PlayerRenderer(this, this.sim.players[0], `P1 ${p1Char.name}`),
-      new PlayerRenderer(this, this.sim.players[1], `P2 ${p2Char.name}`),
+      new PlayerRenderer(this, this.sim.players[0], `P1 ${p1Char.name}`, p1Char.spriteKey),
+      new PlayerRenderer(this, this.sim.players[1], `P2 ${p2Char.name}`, p2Char.spriteKey),
     ];
     this.ballRenderer = new BallRenderer(this, this.sim.ball);
     this.hudRenderer = new HUDRenderer(this, this.sim);

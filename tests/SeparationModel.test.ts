@@ -3,42 +3,40 @@ import { SeparationModel, SeparationContext } from '../src/simulation/models/Sep
 import { Vector2 } from '../src/utils/Vector2';
 import { CharacterRatings } from '../src/data/CharacterRatings';
 
-const flashRatings: CharacterRatings = {
-  speed: 92, acceleration: 88, ballHandle: 90,
-  shotRating: 72, defense: 65, lateralQuickness: 85, contestResistance: 60,
+const ninetyNineRatings: CharacterRatings = {
+  speed: 92, power: 68, range: 72, defense: 65, steal: 90, clutchEnergy: 60,
 };
 
-const tankRatings: CharacterRatings = {
-  speed: 65, acceleration: 60, ballHandle: 55,
-  shotRating: 80, defense: 90, lateralQuickness: 58, contestResistance: 88,
+const breezyRatings: CharacterRatings = {
+  speed: 75, power: 82, range: 85, defense: 88, steal: 58, clutchEnergy: 90,
 };
 
 describe('SeparationModel', () => {
-  it('should give more separation to better ball handler', () => {
-    const flashCtx: SeparationContext = {
-      offenseRatings: flashRatings,
-      defenseRatings: tankRatings,
+  it('should give more separation to better ball handler (higher steal)', () => {
+    const ctx99: SeparationContext = {
+      offenseRatings: ninetyNineRatings,
+      defenseRatings: breezyRatings,
       offenseVelocity: Vector2.zero(),
     };
-    const tankCtx: SeparationContext = {
-      offenseRatings: tankRatings,
-      defenseRatings: flashRatings,
+    const ctxBreezy: SeparationContext = {
+      offenseRatings: breezyRatings,
+      defenseRatings: ninetyNineRatings,
       offenseVelocity: Vector2.zero(),
     };
-    const flashSep = SeparationModel.calculate(flashCtx);
-    const tankSep = SeparationModel.calculate(tankCtx);
-    expect(flashSep.separationDistance).toBeGreaterThan(tankSep.separationDistance);
+    expect(SeparationModel.calculate(ctx99).separationDistance).toBeGreaterThan(
+      SeparationModel.calculate(ctxBreezy).separationDistance,
+    );
   });
 
   it('should give more separation when moving', () => {
     const still: SeparationContext = {
-      offenseRatings: flashRatings,
-      defenseRatings: tankRatings,
+      offenseRatings: ninetyNineRatings,
+      defenseRatings: breezyRatings,
       offenseVelocity: Vector2.zero(),
     };
     const moving: SeparationContext = {
-      offenseRatings: flashRatings,
-      defenseRatings: tankRatings,
+      offenseRatings: ninetyNineRatings,
+      defenseRatings: breezyRatings,
       offenseVelocity: new Vector2(300, 0),
     };
     expect(SeparationModel.calculate(moving).separationDistance).toBeGreaterThan(
@@ -48,8 +46,8 @@ describe('SeparationModel', () => {
 
   it('should give positive separation distance', () => {
     const ctx: SeparationContext = {
-      offenseRatings: tankRatings,
-      defenseRatings: flashRatings,
+      offenseRatings: breezyRatings,
+      defenseRatings: ninetyNineRatings,
       offenseVelocity: Vector2.zero(),
     };
     const result = SeparationModel.calculate(ctx);
@@ -57,19 +55,19 @@ describe('SeparationModel', () => {
     expect(result.burstVelocity).toBeGreaterThan(0);
   });
 
-  it('should be reduced by high lateral quickness', () => {
-    const vsSlowDef: SeparationContext = {
-      offenseRatings: flashRatings,
-      defenseRatings: { ...tankRatings, lateralQuickness: 30 },
+  it('should be reduced by high defense rating', () => {
+    const vsLowDef: SeparationContext = {
+      offenseRatings: ninetyNineRatings,
+      defenseRatings: { ...breezyRatings, defense: 30 },
       offenseVelocity: Vector2.zero(),
     };
-    const vsFastDef: SeparationContext = {
-      offenseRatings: flashRatings,
-      defenseRatings: { ...tankRatings, lateralQuickness: 95 },
+    const vsHighDef: SeparationContext = {
+      offenseRatings: ninetyNineRatings,
+      defenseRatings: { ...breezyRatings, defense: 95 },
       offenseVelocity: Vector2.zero(),
     };
-    expect(SeparationModel.calculate(vsSlowDef).separationDistance).toBeGreaterThan(
-      SeparationModel.calculate(vsFastDef).separationDistance,
+    expect(SeparationModel.calculate(vsLowDef).separationDistance).toBeGreaterThan(
+      SeparationModel.calculate(vsHighDef).separationDistance,
     );
   });
 });

@@ -1,32 +1,34 @@
 import { CharacterDef } from './CharacterRatings';
 
 export const CHARACTERS: Record<string, CharacterDef> = {
-  flash: {
-    id: 'flash',
-    name: 'Flash',
-    color: 0x00aaff,
+  ninetynine: {
+    id: 'ninetynine',
+    name: '99',
+    title: 'Soul Guard',
+    color: 0x00ccff,
+    spriteKey: 'char-99',
     ratings: {
       speed: 92,
-      acceleration: 88,
-      ballHandle: 90,
-      shotRating: 72,
+      power: 68,
+      range: 72,
       defense: 65,
-      lateralQuickness: 85,
-      contestResistance: 60,
+      steal: 90,
+      clutchEnergy: 60,
     },
   },
-  tank: {
-    id: 'tank',
-    name: 'Tank',
-    color: 0xff4444,
+  breezy: {
+    id: 'breezy',
+    name: 'Breezy',
+    title: 'Tribe Elite',
+    color: 0xff44aa,
+    spriteKey: 'char-breezy',
     ratings: {
-      speed: 65,
-      acceleration: 60,
-      ballHandle: 55,
-      shotRating: 80,
-      defense: 90,
-      lateralQuickness: 58,
-      contestResistance: 88,
+      speed: 75,
+      power: 82,
+      range: 85,
+      defense: 88,
+      steal: 58,
+      clutchEnergy: 90,
     },
   },
 };

@@ -3,14 +3,21 @@ import { GameSimulation } from '../simulation/GameSimulation';
 import { GamePhase } from '../simulation/GameState';
 import { AIPersonality, AI_PRESETS } from './AIPersonality';
 import { PLAYER_STATE } from '../simulation/PlayerStates';
+import { PlayerSim } from '../simulation/PlayerSim';
 import { Vector2 } from '../utils/Vector2';
 import { THREE_POINT_RADIUS, HOOP_X, HOOP_Y } from '../config/Constants';
+
+type AIState = 'idle' | 'drive' | 'position' | 'stepback' | 'shoot_windup' | 'shoot_release' | 'defend' | 'defend_close';
 
 export class AIController {
   private personality: AIPersonality;
   private playerIndex: number;
   private decisionTimer: number = 0;
   private currentDecision: IPlayerInput = emptyInput();
+  private aiState: AIState = 'idle';
+  private targetPosition: Vector2 = Vector2.zero();
+  private shootWindupTimer: number = 0;
+  private targetReleaseTime: number = 0.38; // aim for good timing
 
   constructor(playerIndex: number, difficulty: string = 'medium') {
     this.playerIndex = playerIndex;
@@ -24,12 +31,31 @@ export class AIController {
     const phase = sim.phaseManager.phase;
     const iHaveBall = sim.phaseManager.possession === this.playerIndex;
 
-    // Only act during live/checkball/inbound
     if (phase === GamePhase.GameOver || phase === GamePhase.Shooting) {
       return input;
     }
 
-    // Reaction delay
+    // Handle shooting state machine (needs per-frame updates, not delayed)
+    if (this.aiState === 'shoot_windup') {
+      input.shootHeld = true;
+      this.shootWindupTimer += 1 / 60;
+      if (this.shootWindupTimer >= this.targetReleaseTime) {
+        this.aiState = 'shoot_release';
+      }
+      this.currentDecision = { ...input };
+      return input;
+    }
+
+    if (this.aiState === 'shoot_release') {
+      input.shootHeld = false;
+      input.shootReleased = true;
+      this.aiState = 'idle';
+      this.decisionTimer = 0.5; // pause after shooting
+      this.currentDecision = { ...input };
+      return input;
+    }
+
+    // Reaction delay for non-shooting decisions
     this.decisionTimer -= 1 / 60;
     if (this.decisionTimer > 0) {
       return this.currentDecision;
@@ -37,12 +63,11 @@ export class AIController {
     this.decisionTimer = this.personality.reactionDelay;
 
     if (iHaveBall && (phase === GamePhase.Live || phase === GamePhase.CheckBall || phase === GamePhase.Inbound)) {
-      this.decideOffense(input, sim, me, opponent);
+      this.decideOffense(input, sim, me, opponent, phase);
     } else if (!iHaveBall && phase === GamePhase.Live) {
-      this.decideDefense(input, sim, me, opponent);
+      this.decideDefense(input, me, opponent);
     } else if (!iHaveBall) {
-      // During check ball / inbound, just move toward defense position
-      this.moveToward(input, me.position, sim.court.getInboundDefensePosition());
+      this.moveToward(input, me.position, sim.court.getInboundDefensePosition(), 15);
     }
 
     this.currentDecision = { ...input };
@@ -52,81 +77,112 @@ export class AIController {
   private decideOffense(
     input: IPlayerInput,
     sim: GameSimulation,
-    me: import('../simulation/PlayerSim').PlayerSim,
-    opponent: import('../simulation/PlayerSim').PlayerSim,
+    me: PlayerSim,
+    opponent: PlayerSim,
+    phase: GamePhase,
   ): void {
     const hoopPos = new Vector2(HOOP_X, HOOP_Y);
     const distToHoop = me.position.distanceTo(hoopPos);
     const distToDefender = me.position.distanceTo(opponent.position);
 
-    // If far from hoop, drive closer
-    if (distToHoop > THREE_POINT_RADIUS + 50) {
-      this.moveToward(input, me.position, hoopPos);
+    // During check ball, just hold position
+    if (phase === GamePhase.CheckBall || phase === GamePhase.Inbound) {
+      this.aiState = 'idle';
       return;
     }
 
-    // If defender is close and we have handles, try stepback
-    if (distToDefender < 60 && Math.random() < this.personality.aggression * 0.5) {
+    // Can't act during stepback
+    if (me.fsm.isInState(PLAYER_STATE.STEPBACK)) {
+      return;
+    }
+
+    // Already shooting
+    if (me.fsm.isInState(PLAYER_STATE.SHOOTING)) {
+      return;
+    }
+
+    // Step 1: If far from shooting range, drive to the hoop
+    if (distToHoop > THREE_POINT_RADIUS + 30) {
+      this.aiState = 'drive';
+      // Pick a spot inside the arc, slightly randomized
+      const angle = Math.atan2(me.position.y - hoopPos.y, me.position.x - hoopPos.x);
+      const targetDist = THREE_POINT_RADIUS * 0.6;
+      this.targetPosition = hoopPos.add(Vector2.fromAngle(angle, targetDist));
+      this.moveToward(input, me.position, this.targetPosition, 20);
+      return;
+    }
+
+    // Step 2: In range. If defender is close, consider stepback
+    if (distToDefender < 55 && Math.random() < this.personality.aggression * 0.4 &&
+        !me.fsm.isInState(PLAYER_STATE.STEPBACK)) {
       input.stepbackPressed = true;
+      this.aiState = 'stepback';
+      this.decisionTimer = 0.5; // wait after stepback
       return;
     }
 
-    // Decide whether to shoot
-    const shouldShoot = distToHoop < THREE_POINT_RADIUS + 80 &&
-      (distToDefender > 50 || Math.random() < this.personality.shotTendency * 0.3);
+    // Step 3: Decide to shoot
+    const isOpen = distToDefender > 60;
+    const shootChance = isOpen
+      ? this.personality.shotTendency * 0.8
+      : this.personality.shotTendency * 0.2;
 
-    if (shouldShoot && !me.fsm.isInState(PLAYER_STATE.SHOOTING) && !me.fsm.isInState(PLAYER_STATE.STEPBACK)) {
-      // Simulate a hold + release cycle
-      if (!input.shootHeld) {
-        input.shootPressed = true;
-        input.shootHeld = true;
-      }
-      // AI releases after a decent timing (~0.35-0.45s, simulated via state timer)
-      if (me.fsm.isInState(PLAYER_STATE.SHOOTING) && me.stateTimer > 0.3 + Math.random() * 0.15) {
-        input.shootHeld = false;
-        input.shootReleased = true;
-      }
+    if (Math.random() < shootChance) {
+      // Start shooting
+      input.shootPressed = true;
+      input.shootHeld = true;
+      this.aiState = 'shoot_windup';
+      this.shootWindupTimer = 0;
+      // Vary timing based on personality
+      this.targetReleaseTime = 0.33 + Math.random() * 0.12;
       return;
     }
 
-    // Otherwise, jockey for position
-    const jitter = new Vector2(
-      (Math.random() - 0.5) * 2,
-      (Math.random() - 0.5) * 2,
-    );
-    const idealSpot = hoopPos.add(new Vector2(-THREE_POINT_RADIUS * 0.7, (Math.random() - 0.5) * 200));
-    this.moveToward(input, me.position, idealSpot.add(jitter.scale(30)));
+    // Step 4: Jockey for position (move to a good spot, then stop)
+    this.aiState = 'position';
+    // Pick a stable spot instead of random jitter each frame
+    if (this.targetPosition.lengthSquared() === 0 || me.position.distanceTo(this.targetPosition) < 15) {
+      const angle = -Math.PI * 0.5 + Math.random() * Math.PI; // arc from top to bottom
+      const dist = THREE_POINT_RADIUS * (0.5 + Math.random() * 0.3);
+      this.targetPosition = hoopPos.add(Vector2.fromAngle(angle, dist));
+    }
+    this.moveToward(input, me.position, this.targetPosition, 15);
   }
 
   private decideDefense(
     input: IPlayerInput,
-    sim: GameSimulation,
-    me: import('../simulation/PlayerSim').PlayerSim,
-    opponent: import('../simulation/PlayerSim').PlayerSim,
+    me: PlayerSim,
+    opponent: PlayerSim,
   ): void {
-    // Stay between opponent and hoop
     const hoopPos = new Vector2(HOOP_X, HOOP_Y);
+    const distToOpponent = me.position.distanceTo(opponent.position);
+
+    // Position between opponent and hoop
     const toHoop = hoopPos.subtract(opponent.position).normalize();
-    const idealDefPos = opponent.position.add(toHoop.scale(40 * this.personality.defenseIntensity));
+    const cushion = 35 + (1 - this.personality.defenseIntensity) * 40;
+    const idealDefPos = opponent.position.add(toHoop.scale(cushion));
 
-    this.moveToward(input, me.position, idealDefPos);
+    this.moveToward(input, me.position, idealDefPos, 10);
 
-    // Hold defense stance when close
-    const dist = me.position.distanceTo(opponent.position);
-    if (dist < 100) {
+    // Defense stance when close
+    if (distToOpponent < 90) {
       input.defenseStance = true;
+      this.aiState = 'defend_close';
+    } else {
+      this.aiState = 'defend';
     }
   }
 
-  private moveToward(input: IPlayerInput, from: Vector2, to: Vector2): void {
+  private moveToward(input: IPlayerInput, from: Vector2, to: Vector2, deadzone: number): void {
     const diff = to.subtract(from);
     const dist = diff.length();
-    if (dist < 5) {
+    if (dist < deadzone) {
       input.moveX = 0;
       input.moveY = 0;
       return;
     }
     const dir = diff.normalize();
+    // Use full input magnitude (1.0) - let the movement model handle speed
     input.moveX = dir.x;
     input.moveY = dir.y;
   }

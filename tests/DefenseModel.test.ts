@@ -4,13 +4,11 @@ import { Vector2 } from '../src/utils/Vector2';
 import { CharacterRatings } from '../src/data/CharacterRatings';
 
 const goodDefender: CharacterRatings = {
-  speed: 65, acceleration: 60, ballHandle: 55,
-  shotRating: 80, defense: 90, lateralQuickness: 58, contestResistance: 88,
+  speed: 75, power: 82, range: 85, defense: 88, steal: 58, clutchEnergy: 90,
 };
 
 const poorDefender: CharacterRatings = {
-  speed: 92, acceleration: 88, ballHandle: 90,
-  shotRating: 72, defense: 65, lateralQuickness: 85, contestResistance: 60,
+  speed: 92, power: 68, range: 72, defense: 65, steal: 90, clutchEnergy: 60,
 };
 
 describe('DefenseModel', () => {
@@ -33,8 +31,7 @@ describe('DefenseModel', () => {
       defenderRatings: goodDefender,
       isInDefenseStance: true,
     };
-    const contest = DefenseModel.calculateContestPercent(ctx);
-    expect(contest).toBeGreaterThan(0.5);
+    expect(DefenseModel.calculateContestPercent(ctx)).toBeGreaterThan(0.5);
   });
 
   it('should give higher contest to better defender', () => {

@@ -16,8 +16,8 @@ export interface SeparationResult {
 
 export class SeparationModel {
   static calculate(ctx: SeparationContext): SeparationResult {
-    const handleFactor = ctx.offenseRatings.ballHandle / 100;
-    const lateralFactor = ctx.defenseRatings.lateralQuickness / 100;
+    const handleFactor = ctx.offenseRatings.steal / 100; // steal = ball handling on offense
+    const lateralFactor = ctx.defenseRatings.defense / 100; // defense includes lateral quickness
 
     // Base separation from ball handling
     const baseSeparation = STEPBACK_DISTANCE + handleFactor * 70;
