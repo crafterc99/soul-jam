@@ -20,6 +20,8 @@ export class HUDRenderer {
   private controlsText: Phaser.GameObjects.Text;
 
   private feedbackTimer: number = 0;
+  private lastScores: [number, number] = [0, 0];
+  private scorePopTimer: number = 0;
 
   constructor(private scene: Phaser.Scene, private sim: GameSimulation) {
     // Dark background to cover the baked-in scoreboard in court image
@@ -60,7 +62,7 @@ export class HUDRenderer {
 
     // Controls hint
     this.controlsText = scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 12,
-      'WASD: Move | SPACE: Shoot (hold+release) | Q: Stepback | SHIFT: Defend | ESC: Pause', {
+      'WASD: Move | SPACE: Shoot | Q: Stepback | E: Crossover | F: Steal | SHIFT: Defend', {
       fontSize: '10px',
       color: '#444444',
     }).setOrigin(0.5).setDepth(101);
@@ -69,26 +71,61 @@ export class HUDRenderer {
   update(dt: number): void {
     const snap = this.sim.getSnapshot();
 
-    // Score
+    // Score with pop animation on change
+    const scoresChanged =
+      snap.scores[0] !== this.lastScores[0] || snap.scores[1] !== this.lastScores[1];
+    if (scoresChanged) {
+      this.scorePopTimer = 0.25;
+      this.lastScores = [...snap.scores] as [number, number];
+    }
+
+    if (this.scorePopTimer > 0) {
+      this.scorePopTimer -= dt;
+      const popScale = 1 + this.scorePopTimer * 0.6; // 1.15 → 1.0
+      this.scoreText.setScale(popScale);
+      this.scoreText.setColor('#ffffff');
+    } else {
+      this.scoreText.setScale(1);
+      this.scoreText.setColor('#ffcc00');
+    }
     this.scoreText.setText(`${snap.scores[0]}  -  ${snap.scores[1]}`);
 
-    // Phase
+    // Phase text with contextual color
     let phaseLabel = '';
+    let phaseColor = '#ffaa00';
     switch (snap.phase) {
-      case GamePhase.CheckBall: phaseLabel = 'CHECK BALL'; break;
+      case GamePhase.CheckBall:
+        if (this.sim.lastStealResult === 'success') {
+          phaseLabel = 'STOLEN!';
+          phaseColor = '#ff4444';
+        } else {
+          phaseLabel = 'CHECK BALL';
+        }
+        break;
       case GamePhase.Inbound: phaseLabel = 'INBOUND'; break;
       case GamePhase.Live: phaseLabel = ''; break;
       case GamePhase.Shooting: phaseLabel = ''; break;
-      case GamePhase.Scored: phaseLabel = `SCORED! +${this.sim.lastShotPoints}`; break;
-      case GamePhase.Missed: phaseLabel = 'MISS!'; break;
-      case GamePhase.Violation: phaseLabel = 'OUT OF BOUNDS'; break;
+      case GamePhase.Scored:
+        phaseLabel = `SCORED! +${this.sim.lastShotPoints}`;
+        phaseColor = '#44ff44';
+        break;
+      case GamePhase.Missed:
+        phaseLabel = 'MISS!';
+        phaseColor = '#ff4444';
+        break;
+      case GamePhase.Violation:
+        phaseLabel = 'OUT OF BOUNDS';
+        phaseColor = '#ff6644';
+        break;
       case GamePhase.GameOver: {
         const winner = this.sim.scoreKeeper.getWinner();
         phaseLabel = winner !== null ? `PLAYER ${winner + 1} WINS!` : 'GAME OVER';
+        phaseColor = '#ffffff';
         break;
       }
     }
     this.phaseText.setText(phaseLabel);
+    this.phaseText.setColor(phaseColor);
 
     // Shot feedback in the feedback bar area
     this.feedbackTimer -= dt;
@@ -97,17 +134,30 @@ export class HUDRenderer {
       this.feedbackBackground.setAlpha(0);
     }
 
+    // Shot result feedback
     if (snap.phase === GamePhase.Scored || snap.phase === GamePhase.Missed) {
       if (this.feedbackTimer <= 0) {
         const made = snap.phase === GamePhase.Scored;
         const timing = this.sim.lastTimingGrade;
         const contest = Math.round(this.sim.lastContestPercent * 100);
+        const points = this.sim.lastShotPoints;
+        const shotType = points === 3 ? '3PT' : '2PT';
         this.shotFeedback.setText(
-          `${timing} / ${contest > 0 ? 'CONTESTED' : 'OPEN'} / ${made ? 'SPLASH!' : 'BRICK!'}`
+          `${shotType} / ${timing} / ${contest > 0 ? `${contest}% CONTESTED` : 'OPEN'} / ${made ? 'SPLASH!' : 'BRICK!'}`
         );
         this.shotFeedback.setColor(made ? '#44ff44' : '#ff4444');
         this.feedbackBackground.setAlpha(0.9);
         this.feedbackTimer = 2.5;
+      }
+    }
+
+    // Steal feedback
+    if (this.sim.lastStealResult === 'success' && snap.phase === GamePhase.CheckBall) {
+      if (this.feedbackTimer <= 0) {
+        this.shotFeedback.setText('BALL STOLEN!');
+        this.shotFeedback.setColor('#ff6644');
+        this.feedbackBackground.setAlpha(0.9);
+        this.feedbackTimer = 1.5;
       }
     }
 
@@ -127,20 +177,32 @@ export class HUDRenderer {
       // Fill based on timing
       const progress = Math.min(offense.stateTimer / SHOT_TIMING_WINDOW, 1);
 
-      // Color based on timing zone
+      // Smooth color gradient: red → orange → green → white (perfect)
       let color = 0xff4444; // early
-      if (progress > 0.65 && progress < 0.95) color = 0x44ff44; // good/perfect zone
+      if (progress > 0.80 && progress < 0.92) color = 0x44ff44; // perfect zone
+      else if (progress > 0.65) color = 0x88ff44; // good zone
       else if (progress > 0.45) color = 0xffaa00; // decent
 
       this.timingMeter.fillStyle(color, 1);
       this.timingMeter.fillRect(meterX, meterY, meterW * progress, meterH);
 
-      // Perfect zone marker
+      // Perfect zone marker with glow pulse
       const perfectZone = 0.85;
-      this.timingMeter.lineStyle(2, 0xffffff, 0.8);
+      const glowPulse = 0.6 + Math.sin(Date.now() * 0.01) * 0.3;
+      this.timingMeter.lineStyle(2, 0xffffff, glowPulse);
       this.timingMeter.lineBetween(
-        meterX + meterW * perfectZone, meterY - 2,
-        meterX + meterW * perfectZone, meterY + meterH + 2,
+        meterX + meterW * perfectZone, meterY - 3,
+        meterX + meterW * perfectZone, meterY + meterH + 3,
+      );
+
+      // Perfect zone bracket
+      const zoneStart = 0.80;
+      const zoneEnd = 0.92;
+      this.timingMeter.lineStyle(1, 0xffffff, 0.3);
+      this.timingMeter.fillStyle(0xffffff, 0.08);
+      this.timingMeter.fillRect(
+        meterX + meterW * zoneStart, meterY,
+        meterW * (zoneEnd - zoneStart), meterH,
       );
     }
   }

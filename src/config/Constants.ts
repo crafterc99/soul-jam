@@ -54,7 +54,7 @@ export const TIMING_EARLY_PENALTY = -0.08;
 // Separation
 export const STEPBACK_DURATION = 0.3;
 export const STEPBACK_DISTANCE = 30;
-export const CROSSOVER_DURATION = 0.25;
+export const CROSSOVER_DURATION = 0.3;
 export const CROSSOVER_SHIFT_DISTANCE = 40;
 
 // Game phases
@@ -62,8 +62,19 @@ export const CHECK_BALL_DURATION = 1.5;
 export const INBOUND_DURATION = 1.0;
 export const SCORED_CELEBRATION_DURATION = 2.0;
 
+// 3-point corner zones (near sidelines, shorter 3-point distance like real NBA)
+// NBA: corner 3 = 22ft, arc 3 = 23'9". Ratio ≈ 0.926
+export const CORNER_THREE_ZONE = 100;  // pixels from sideline to use corner logic
+export const CORNER_THREE_RADIUS = Math.round(THREE_POINT_RADIUS * 0.926); // ~533
+
 // Defense
 export const CONTEST_MAX_DISTANCE = 80;
+
+// Steal
+export const STEAL_RANGE = 50;           // must be this close to ball handler
+export const STEAL_BASE_CHANCE = 0.30;   // 30% base steal chance
+export const STEAL_COOLDOWN = 0.8;       // seconds between steal attempts
+export const STEAL_FREEZE_DURATION = 0.5; // freeze on failed steal (reach-in)
 
 // Scene keys
 export const SCENE_BOOT = 'BootScene';

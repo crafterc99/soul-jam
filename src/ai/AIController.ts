@@ -181,6 +181,23 @@ export class AIController {
     if (distToOpponent < 90) {
       input.defenseStance = true;
       this.aiState = 'defend_close';
+
+      // Attempt steal when very close and opponent is vulnerable
+      if (distToOpponent < 50 && me.stealCooldown <= 0 &&
+          !me.fsm.isInState(PLAYER_STATE.STEAL_REACH)) {
+        const isOpponentVulnerable =
+          opponent.fsm.isInState(PLAYER_STATE.CROSSOVER) ||
+          opponent.fsm.isInState(PLAYER_STATE.STEPBACK);
+
+        // Higher steal chance when opponent is mid-move
+        const stealAttemptChance = isOpponentVulnerable
+          ? this.personality.defenseIntensity * 0.6
+          : this.personality.defenseIntensity * 0.15;
+
+        if (Math.random() < stealAttemptChance) {
+          input.stealPressed = true;
+        }
+      }
     } else {
       this.aiState = 'defend';
     }

@@ -1,7 +1,7 @@
 import { State } from './StateMachine';
 import { PlayerSim } from './PlayerSim';
 import { MovementModel } from './models/MovementModel';
-import { CROSSOVER_DURATION } from '../config/Constants';
+import { CROSSOVER_DURATION, STEPBACK_DURATION, STEAL_FREEZE_DURATION } from '../config/Constants';
 
 export const PLAYER_STATE = {
   IDLE: 'idle',
@@ -10,6 +10,7 @@ export const PLAYER_STATE = {
   STEPBACK: 'stepback',
   CROSSOVER: 'crossover',
   SHOOTING: 'shooting',
+  STEAL_REACH: 'steal_reach',
 } as const;
 
 export class IdleState implements State<PlayerSim> {
@@ -142,13 +143,13 @@ export class CrossoverState implements State<PlayerSim> {
   update(player: PlayerSim, dt: number): void {
     player.stateTimer += dt;
 
-    if (player.stateTimer >= CROSSOVER_DURATION) {
+    if (player.stateTimer >= player.crossoverDuration) {
       player.fsm.setState(PLAYER_STATE.IDLE);
       return;
     }
 
-    // During crossover, apply a small lateral burst to the offense
-    const progress = player.stateTimer / CROSSOVER_DURATION;
+    // During crossover, apply lateral burst (same deceleration curve as stepback)
+    const progress = player.stateTimer / player.crossoverDuration;
     const speedCurve = 1 - progress;
     const crossVel = player.crossoverVelocity.scale(speedCurve);
     player.position = player.position.add(crossVel.scale(dt));
@@ -190,5 +191,23 @@ export class ShootingState implements State<PlayerSim> {
 
     // Player is stationary while shooting
     player.velocity = player.velocity.scale(0);
+  }
+}
+
+export class StealReachState implements State<PlayerSim> {
+  name = PLAYER_STATE.STEAL_REACH;
+
+  enter(player: PlayerSim): void {
+    player.stateTimer = 0;
+    player.velocity = player.velocity.scale(0); // stop movement
+  }
+
+  update(player: PlayerSim, dt: number): void {
+    player.stateTimer += dt;
+
+    // Frozen during reach-in animation
+    if (player.stateTimer >= STEAL_FREEZE_DURATION) {
+      player.fsm.setState(PLAYER_STATE.IDLE);
+    }
   }
 }

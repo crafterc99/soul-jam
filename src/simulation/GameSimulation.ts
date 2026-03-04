@@ -13,8 +13,7 @@ import { SeparationModel, SeparationContext } from './models/SeparationModel';
 import { CharacterDef } from '../data/CharacterRatings';
 import {
   PLAYER_RADIUS, POINTS_TWO, POINTS_THREE,
-  COURT_LEFT, COURT_RIGHT, COURT_TOP, COURT_BOTTOM,
-  CROSSOVER_SHIFT_DISTANCE,
+  STEAL_RANGE, STEAL_BASE_CHANCE, STEAL_COOLDOWN,
 } from '../config/Constants';
 
 export class GameSimulation {
@@ -30,6 +29,7 @@ export class GameSimulation {
   lastShotPoints: number = 0;
   lastScorerIndex: number = -1;
   lastViolationPlayer: number = -1;
+  lastStealResult: 'none' | 'success' | 'fail' = 'none';
 
   constructor(p1Char: CharacterDef, p2Char: CharacterDef) {
     this.court = new CourtSim();
@@ -90,7 +90,7 @@ export class GameSimulation {
         break;
     }
 
-    // Clamp positions to court (but check OOB first during live play)
+    // Clamp positions to court bounds
     for (const player of this.players) {
       player.position = this.court.clampPlayerPosition(player.position);
     }
@@ -127,19 +127,22 @@ export class GameSimulation {
     const offense = this.offensePlayer;
     const defense = this.defensePlayer;
     const offenseInput = offense.playerIndex === 0 ? p1Input : p2Input;
+    const defenseInput = defense.playerIndex === 0 ? p1Input : p2Input;
+
+    const offenseInBurstMove =
+      offense.fsm.isInState(PLAYER_STATE.STEPBACK) ||
+      offense.fsm.isInState(PLAYER_STATE.CROSSOVER);
 
     // Handle stepback
     if (offenseInput.stepbackPressed && offense.hasBall &&
-        !offense.fsm.isInState(PLAYER_STATE.STEPBACK) &&
-        !offense.fsm.isInState(PLAYER_STATE.CROSSOVER) &&
+        !offenseInBurstMove &&
         !offense.fsm.isInState(PLAYER_STATE.SHOOTING)) {
       this.executeStepback(offense, defense);
     }
 
     // Handle crossover
     if (offenseInput.crossoverPressed && offense.hasBall &&
-        !offense.fsm.isInState(PLAYER_STATE.STEPBACK) &&
-        !offense.fsm.isInState(PLAYER_STATE.CROSSOVER) &&
+        !offenseInBurstMove &&
         !offense.fsm.isInState(PLAYER_STATE.SHOOTING)) {
       this.executeCrossover(offense, defense);
     }
@@ -147,8 +150,7 @@ export class GameSimulation {
     // Handle shoot press
     if (offenseInput.shootPressed && offense.hasBall &&
         !offense.fsm.isInState(PLAYER_STATE.SHOOTING) &&
-        !offense.fsm.isInState(PLAYER_STATE.STEPBACK) &&
-        !offense.fsm.isInState(PLAYER_STATE.CROSSOVER)) {
+        !offenseInBurstMove) {
       offense.fsm.setState(PLAYER_STATE.SHOOTING);
     }
 
@@ -157,15 +159,31 @@ export class GameSimulation {
       this.executeShot(offense, defense);
     }
 
+    // Handle steal attempt (defense only)
+    if (defenseInput.stealPressed && !defense.hasBall &&
+        !defense.fsm.isInState(PLAYER_STATE.STEAL_REACH) &&
+        defense.stealCooldown <= 0) {
+      this.executeSteal(offense, defense);
+    }
+
     // Update players
     offense.update(dt);
     defense.update(dt);
 
+    // Clamp burst moves to court bounds (prevent OOB from stepback/crossover)
+    if (offense.fsm.isInState(PLAYER_STATE.STEPBACK) ||
+        offense.fsm.isInState(PLAYER_STATE.CROSSOVER)) {
+      offense.position = this.court.clampPlayerPosition(offense.position);
+    }
+
     // Player collision
     this.resolvePlayerCollision();
 
-    // Out of bounds check on ball handler
-    this.checkOutOfBounds();
+    // Out of bounds check — only during normal movement (not burst moves)
+    if (!offense.fsm.isInState(PLAYER_STATE.STEPBACK) &&
+        !offense.fsm.isInState(PLAYER_STATE.CROSSOVER)) {
+      this.checkOutOfBounds();
+    }
   }
 
   private tickShooting(dt: number): void {
@@ -195,17 +213,8 @@ export class GameSimulation {
     const offense = this.offensePlayer;
     if (!offense.hasBall) return;
 
-    const pos = offense.position;
-    const margin = PLAYER_RADIUS;
-    const oobMargin = 2; // small buffer so they don't trigger right at the edge
-
-    const isOOB =
-      pos.x <= COURT_LEFT + margin + oobMargin ||
-      pos.x >= COURT_RIGHT - margin - oobMargin ||
-      pos.y <= COURT_TOP + margin + oobMargin ||
-      pos.y >= COURT_BOTTOM - margin - oobMargin;
-
-    if (isOOB) {
+    // Use the court's proper OOB check (player circle past the court line)
+    if (this.court.isOutOfBounds(offense.position)) {
       this.lastViolationPlayer = offense.playerIndex;
       this.phaseManager.flipPossession();
       this.transitionToPhase(GamePhase.Violation);
@@ -226,29 +235,87 @@ export class GameSimulation {
   }
 
   private executeCrossover(offense: PlayerSim, defense: PlayerSim): void {
-    // Calculate perpendicular direction to offense→hoop vector
+    // Use SeparationModel for proper burst velocity (same system as stepback)
+    const sepCtx: SeparationContext = {
+      offenseRatings: offense.ratings,
+      defenseRatings: defense.ratings,
+      offenseVelocity: offense.velocity,
+    };
+    const result = SeparationModel.calculate(sepCtx);
+
+    // Calculate perpendicular direction to offense->hoop vector
     const toHoop = this.court.hoopPosition.subtract(offense.position).normalize();
-    const perpendicular = new Vector2(-toHoop.y, toHoop.x); // rotate 90 degrees
+    const perpendicular = new Vector2(-toHoop.y, toHoop.x);
 
-    // Choose side based on offense facing angle
-    const facingDir = Vector2.fromAngle(offense.facingAngle, 1);
-    const dot = facingDir.x * perpendicular.x + facingDir.y * perpendicular.y;
-    const defenderShiftDir = dot >= 0 ? perpendicular : perpendicular.scale(-1);
+    // Choose side based on movement input — if pressing a direction, go that way
+    // If no input, pick the side away from the defender
+    const input = offense.currentInput;
+    let crossDir: Vector2;
 
-    // Scale by ball handling vs defense ratings
-    const handlingFactor = offense.ratings.steal / 100;
-    const defenseFactor = defense.ratings.defense / 100;
-    const effectiveness = 0.5 + 0.5 * (handlingFactor - defenseFactor * 0.6);
-    const clampedEffect = Math.max(0.3, Math.min(1.0, effectiveness));
+    if (input && (input.moveX !== 0 || input.moveY !== 0)) {
+      const moveDir = new Vector2(input.moveX, input.moveY).normalize();
+      const dot = moveDir.x * perpendicular.x + moveDir.y * perpendicular.y;
+      crossDir = dot >= 0 ? perpendicular : perpendicular.scale(-1);
+    } else {
+      // Default: go away from defender
+      const awayFromDefender = offense.position.subtract(defense.position).normalize();
+      const dot = awayFromDefender.x * perpendicular.x + awayFromDefender.y * perpendicular.y;
+      crossDir = dot >= 0 ? perpendicular : perpendicular.scale(-1);
+    }
 
-    // Push defender sideways
-    const shiftAmount = CROSSOVER_SHIFT_DISTANCE * clampedEffect;
-    defense.position = defense.position.add(defenderShiftDir.scale(shiftAmount));
-
-    // Give offense a small burst in the opposite direction
-    const offenseBurst = defenderShiftDir.scale(-120 * clampedEffect);
-    offense.crossoverVelocity = offenseBurst;
+    // Apply lateral burst to offense (no defender teleporting)
+    offense.crossoverVelocity = crossDir.scale(result.burstVelocity);
     offense.fsm.setState(PLAYER_STATE.CROSSOVER);
+  }
+
+  private executeSteal(offense: PlayerSim, defense: PlayerSim): void {
+    const dist = defense.position.distanceTo(offense.position);
+
+    // Start cooldown regardless
+    defense.stealCooldown = STEAL_COOLDOWN;
+
+    // Must be close enough to attempt
+    if (dist > STEAL_RANGE) {
+      // Too far — reach-in freeze penalty for swiping at air
+      defense.fsm.setState(PLAYER_STATE.STEAL_REACH);
+      this.lastStealResult = 'fail';
+      return;
+    }
+
+    // Calculate steal chance
+    const defStealRating = defense.ratings.steal / 100;
+    const offHandling = offense.ratings.steal / 100; // steal = ball handling on offense
+    let stealChance = STEAL_BASE_CHANCE + (defStealRating - offHandling) * 0.25;
+
+    // Bonus if offense is mid-move (vulnerable during crossover/stepback)
+    if (offense.fsm.isInState(PLAYER_STATE.CROSSOVER) ||
+        offense.fsm.isInState(PLAYER_STATE.STEPBACK)) {
+      stealChance += 0.15;
+    }
+
+    // Bonus if defender is in defense stance
+    if (defense.fsm.isInState(PLAYER_STATE.DEFENDING)) {
+      stealChance += 0.10;
+    }
+
+    // Penalty if offense is stationary (protecting ball)
+    if (offense.velocity.length() < 10) {
+      stealChance -= 0.10;
+    }
+
+    stealChance = Math.max(0.05, Math.min(0.70, stealChance));
+
+    if (Math.random() < stealChance) {
+      // Steal success — turnover
+      this.lastStealResult = 'success';
+      this.lastViolationPlayer = offense.playerIndex;
+      this.phaseManager.flipPossession();
+      this.transitionToPhase(GamePhase.CheckBall);
+    } else {
+      // Steal fail — defender gets frozen (reach-in foul penalty)
+      this.lastStealResult = 'fail';
+      defense.fsm.setState(PLAYER_STATE.STEAL_REACH);
+    }
   }
 
   private executeShot(offense: PlayerSim, defense: PlayerSim): void {
@@ -309,6 +376,7 @@ export class GameSimulation {
         this.defensePlayer.reset(defPos);
         this.offensePlayer.hasBall = true;
         this.ball.setPossessor(this.offensePlayer.playerIndex, offPos);
+        this.lastStealResult = 'none';
         break;
       }
       case GamePhase.Violation:

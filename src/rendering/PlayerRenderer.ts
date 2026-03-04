@@ -22,6 +22,9 @@ export class PlayerRenderer {
   private runDribbleKey = '';
   private idleDribbleKey = '';
 
+  // Visual juice timers
+  private flashTimer = 0;
+
   isDribbleAnimActive = false;
 
   constructor(
@@ -81,12 +84,21 @@ export class PlayerRenderer {
     g.clear();
     this.shadow.clear();
 
+    // Tick flash timer
+    if (this.flashTimer > 0) this.flashTimer -= 1 / 60;
+
     const isRunning = p.fsm.isInState(PLAYER_STATE.RUN);
     const isDefending = p.fsm.isInState(PLAYER_STATE.DEFENDING);
     const isShooting = p.fsm.isInState(PLAYER_STATE.SHOOTING);
     const isStepback = p.fsm.isInState(PLAYER_STATE.STEPBACK);
     const isCrossover = p.fsm.isInState(PLAYER_STATE.CROSSOVER);
+    const isStealReach = p.fsm.isInState(PLAYER_STATE.STEAL_REACH);
     const isMoving = p.velocity.length() > 20;
+
+    // Trigger flash on burst move start
+    if ((isStepback || isCrossover) && p.stateTimer < 0.03) {
+      this.flashTimer = 0.12;
+    }
 
     // Decide which sprite to show
     const useRunDribble = this.hasRunDribble && isMoving && p.hasBall && !isShooting && !isStepback && !isCrossover;
@@ -146,7 +158,9 @@ export class PlayerRenderer {
 
       if (isDefending) {
         scale = SPRITE_SCALE * 0.95;
-        g.lineStyle(2, 0xffff00, 0.5);
+        // Pulsing defense circle
+        const pulse = 0.4 + Math.sin(Date.now() * 0.006) * 0.2;
+        g.lineStyle(2, 0xffff00, pulse);
         g.strokeCircle(p.position.x, p.position.y + 2, PLAYER_RADIUS + 4);
       }
       if (isShooting) {
@@ -159,32 +173,56 @@ export class PlayerRenderer {
         scale = SPRITE_SCALE * 0.97;
       }
 
+      if (isStealReach) {
+        // Red tint during reach-in freeze
+        tint = 0xff6666;
+        scale = SPRITE_SCALE * 0.93;
+      }
+
       this.staticSprite.setAlpha((isStepback || isCrossover) ? 0.85 : 1);
       this.staticSprite.setScale(scale);
       this.staticSprite.setTint(tint);
       activeDisplayHeight = this.staticSprite.displayHeight;
 
-      // Ball possession glow when no dribble anim
+      // Ball possession glow when no dribble anim (pulsing)
       if (p.hasBall) {
-        g.lineStyle(2, 0xff6600, 0.6);
+        const glowPulse = 0.4 + Math.sin(Date.now() * 0.005) * 0.2;
+        g.lineStyle(2, 0xff6600, glowPulse);
         g.strokeCircle(p.position.x, p.position.y - 15, PLAYER_RADIUS + 6);
       }
     } else {
       // Fallback: colored circle
       let bodyColor = p.color;
       if (isShooting) bodyColor = 0xffaa00;
+      if (isStealReach) bodyColor = 0xff4444;
       g.fillStyle(bodyColor, (isStepback || isCrossover) ? 0.8 : 1);
       g.fillCircle(p.position.x, p.position.y, PLAYER_RADIUS);
       g.lineStyle(2, 0xffffff, 0.5);
       g.strokeCircle(p.position.x, p.position.y, PLAYER_RADIUS);
       if (isDefending) {
-        g.lineStyle(2, 0xffff00, 0.6);
+        const pulse = 0.4 + Math.sin(Date.now() * 0.006) * 0.2;
+        g.lineStyle(2, 0xffff00, pulse);
         g.strokeCircle(p.position.x, p.position.y, PLAYER_RADIUS + 6);
       }
       if (p.hasBall) {
         g.lineStyle(2, 0xff6600, 0.8);
         g.strokeCircle(p.position.x, p.position.y, PLAYER_RADIUS + 3);
       }
+    }
+
+    // Burst move flash ring (stepback/crossover activation)
+    if (this.flashTimer > 0) {
+      const flashAlpha = this.flashTimer / 0.12;
+      const flashRadius = PLAYER_RADIUS + 10 + (1 - flashAlpha) * 15;
+      g.lineStyle(3, 0xffffff, flashAlpha * 0.7);
+      g.strokeCircle(p.position.x, p.position.y, flashRadius);
+    }
+
+    // Steal reach red ring
+    if (isStealReach) {
+      const reachAlpha = 0.3 + Math.sin(Date.now() * 0.012) * 0.3;
+      g.lineStyle(3, 0xff3333, reachAlpha);
+      g.strokeCircle(p.position.x, p.position.y, PLAYER_RADIUS + 8);
     }
 
     // Stop animations that aren't active

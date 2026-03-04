@@ -4,9 +4,9 @@ import { IPlayerInput } from '../input/IPlayerInput';
 import { StateMachine } from './StateMachine';
 import {
   IdleState, RunState, DefendingState, StepbackState, CrossoverState, ShootingState,
-  PLAYER_STATE,
+  StealReachState, PLAYER_STATE,
 } from './PlayerStates';
-import { STEPBACK_DURATION } from '../config/Constants';
+import { STEPBACK_DURATION, CROSSOVER_DURATION } from '../config/Constants';
 
 export class PlayerSim {
   position: Vector2;
@@ -24,12 +24,16 @@ export class PlayerSim {
   // State timers
   stateTimer: number = 0;
   stepbackDuration: number = STEPBACK_DURATION;
+  crossoverDuration: number = CROSSOVER_DURATION;
   stepbackVelocity: Vector2 = Vector2.zero();
   crossoverVelocity: Vector2 = Vector2.zero();
 
   // Shooting
   shotReleased: boolean = false;
   shotTimingValue: number = 0;
+
+  // Steal
+  stealCooldown: number = 0;
 
   constructor(index: number, position: Vector2, ratings: CharacterRatings, color: number) {
     this.playerIndex = index;
@@ -44,6 +48,7 @@ export class PlayerSim {
     this.fsm.addState(new StepbackState());
     this.fsm.addState(new CrossoverState());
     this.fsm.addState(new ShootingState());
+    this.fsm.addState(new StealReachState());
     this.fsm.setState(PLAYER_STATE.IDLE);
   }
 
@@ -56,6 +61,9 @@ export class PlayerSim {
   }
 
   update(dt: number): void {
+    if (this.stealCooldown > 0) {
+      this.stealCooldown -= dt;
+    }
     this.fsm.update(dt);
   }
 
@@ -67,5 +75,6 @@ export class PlayerSim {
     this.stateTimer = 0;
     this.shotReleased = false;
     this.shotTimingValue = 0;
+    this.stealCooldown = 0;
   }
 }

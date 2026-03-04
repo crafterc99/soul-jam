@@ -40,6 +40,9 @@ export class GamepadInputProvider extends InputProvider {
     // X button = stepback (button index 2)
     input.stepbackPressed = this.pad.X;
 
+    // Y button = steal (button index 3)
+    input.stealPressed = this.pad.Y;
+
     // Left trigger/bumper = defense stance
     input.defenseStance = !!(this.pad.L1 || this.pad.L2 > 0.5);
 

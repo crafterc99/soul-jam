@@ -2,6 +2,7 @@ import { Vector2 } from '../utils/Vector2';
 import {
   COURT_LEFT, COURT_RIGHT, COURT_TOP, COURT_BOTTOM,
   HOOP_X, HOOP_Y, THREE_POINT_RADIUS, PLAYER_RADIUS,
+  CORNER_THREE_ZONE, CORNER_THREE_RADIUS,
 } from '../config/Constants';
 
 export class CourtSim {
@@ -25,8 +26,35 @@ export class CourtSim {
     );
   }
 
+  /** Check if position is out of bounds (player center past the court line + radius) */
+  isOutOfBounds(pos: Vector2): boolean {
+    const margin = PLAYER_RADIUS;
+    return (
+      pos.x < COURT_LEFT + margin ||
+      pos.x > COURT_RIGHT - margin ||
+      pos.y < COURT_TOP + margin ||
+      pos.y > COURT_BOTTOM - margin
+    );
+  }
+
   isBehindThreePointLine(pos: Vector2): boolean {
-    return pos.distanceTo(this.hoopPosition) > THREE_POINT_RADIUS;
+    const dist = pos.distanceTo(this.hoopPosition);
+
+    // Corner 3: near sidelines, use shorter distance (like real NBA courts)
+    // NBA corner 3 = 22ft vs arc 3 = 23'9"
+    const distToTopSideline = pos.y - COURT_TOP;
+    const distToBottomSideline = COURT_BOTTOM - pos.y;
+    const nearestSideline = Math.min(distToTopSideline, distToBottomSideline);
+
+    if (nearestSideline < CORNER_THREE_ZONE) {
+      // In corner zone: use shorter corner 3 radius
+      // Blend smoothly between corner and arc radius based on distance to sideline
+      const t = nearestSideline / CORNER_THREE_ZONE; // 0 at sideline, 1 at zone edge
+      const effectiveRadius = CORNER_THREE_RADIUS + (THREE_POINT_RADIUS - CORNER_THREE_RADIUS) * t;
+      return dist > effectiveRadius;
+    }
+
+    return dist > THREE_POINT_RADIUS;
   }
 
   distanceToHoop(pos: Vector2): number {

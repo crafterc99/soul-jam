@@ -10,6 +10,7 @@ export interface KeyBindings {
   shoot: number;
   stepback: number;
   crossover: number;
+  steal: number;
   defense: number;
   pause: number;
 }
@@ -22,6 +23,7 @@ export const WASD_BINDINGS: KeyBindings = {
   shoot: Phaser.Input.Keyboard.KeyCodes.SPACE,
   stepback: Phaser.Input.Keyboard.KeyCodes.Q,
   crossover: Phaser.Input.Keyboard.KeyCodes.E,
+  steal: Phaser.Input.Keyboard.KeyCodes.F,
   defense: Phaser.Input.Keyboard.KeyCodes.SHIFT,
   pause: Phaser.Input.Keyboard.KeyCodes.ESC,
 };
@@ -34,6 +36,7 @@ export const ARROW_BINDINGS: KeyBindings = {
   shoot: Phaser.Input.Keyboard.KeyCodes.NUMPAD_ZERO,
   stepback: Phaser.Input.Keyboard.KeyCodes.NUMPAD_ONE,
   crossover: Phaser.Input.Keyboard.KeyCodes.NUMPAD_THREE,
+  steal: Phaser.Input.Keyboard.KeyCodes.NUMPAD_FOUR,
   defense: Phaser.Input.Keyboard.KeyCodes.NUMPAD_TWO,
   pause: Phaser.Input.Keyboard.KeyCodes.P,
 };
@@ -73,6 +76,7 @@ export class KeyboardInputProvider extends InputProvider {
 
     input.stepbackPressed = Phaser.Input.Keyboard.JustDown(this.keys.stepback);
     input.crossoverPressed = Phaser.Input.Keyboard.JustDown(this.keys.crossover);
+    input.stealPressed = Phaser.Input.Keyboard.JustDown(this.keys.steal);
     input.defenseStance = this.keys.defense.isDown;
     input.pausePressed = Phaser.Input.Keyboard.JustDown(this.keys.pause);
 
