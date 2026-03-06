@@ -35,12 +35,17 @@ export class PreloadScene extends Phaser.Scene {
       progressBox.destroy();
     });
 
-    // Load game assets
+    // Static images
     this.load.image('court', 'assets/images/court.webp');
     this.load.image('loading-screen', 'assets/images/loading-screen.webp');
     this.load.image('playerselect-bg', 'assets/images/playerselect.jpg');
     this.load.image('char-99', 'assets/images/99full.webp');
     this.load.image('char-breezy', 'assets/images/breezyfull.webp');
+    this.load.image('basketball', 'assets/images/basketball.png');
+
+    // Player select backgrounds
+    this.load.image('select-99', 'assets/images/99-player-select.webp');
+    this.load.image('select-breezy', 'assets/images/breezy-player-select.webp');
 
     // Breezy running dribble: 4 cols x 2 rows = 8 frames, each 480x717
     this.load.spritesheet('breezy-dribble', 'assets/images/breezy-dribble.png', {
@@ -52,6 +57,30 @@ export class PreloadScene extends Phaser.Scene {
     this.load.spritesheet('breezy-idle-dribble', 'assets/images/breezy-idle-dribble.png', {
       frameWidth: 320,
       frameHeight: 1434,
+    });
+
+    // Breezy defensive slide left: 3 cols x 2 rows = 6 frames, each 640x717
+    this.load.spritesheet('breezy-defensive-slide-left', 'assets/images/breezy-defensive-slide-left.png', {
+      frameWidth: 640,
+      frameHeight: 717,
+    });
+
+    // Breezy defensive slide right: 3 cols x 2 rows = 6 frames, each 640x717
+    this.load.spritesheet('breezy-defensive-slide-right', 'assets/images/breezy-defensive-slide-right.png', {
+      frameWidth: 640,
+      frameHeight: 717,
+    });
+
+    // Breezy jumpshot: 8 cols x 1 row = 8 frames, each 240x1434
+    this.load.spritesheet('breezy-jumpshot', 'assets/images/breezy-jumpshot.png', {
+      frameWidth: 240,
+      frameHeight: 1434,
+    });
+
+    // Breezy step back: 4 cols x 2 rows, using top row = 4 frames, each 480x717
+    this.load.spritesheet('breezy-stepback', 'assets/images/breezy-stepback.png', {
+      frameWidth: 480,
+      frameHeight: 717,
     });
   }
 
@@ -70,6 +99,38 @@ export class PreloadScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers('breezy-idle-dribble', { start: 0, end: 5 }),
       frameRate: 5,
       repeat: -1,
+    });
+
+    // Defensive slide left
+    this.anims.create({
+      key: 'breezy-defensive-slide-left-anim',
+      frames: this.anims.generateFrameNumbers('breezy-defensive-slide-left', { start: 0, end: 5 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+
+    // Defensive slide right
+    this.anims.create({
+      key: 'breezy-defensive-slide-right-anim',
+      frames: this.anims.generateFrameNumbers('breezy-defensive-slide-right', { start: 0, end: 5 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+
+    // Jumpshot (play once through the shot)
+    this.anims.create({
+      key: 'breezy-jumpshot-anim',
+      frames: this.anims.generateFrameNumbers('breezy-jumpshot', { start: 0, end: 7 }),
+      frameRate: 8,
+      repeat: 0,
+    });
+
+    // Step back (play once)
+    this.anims.create({
+      key: 'breezy-stepback-anim',
+      frames: this.anims.generateFrameNumbers('breezy-stepback', { start: 0, end: 3 }),
+      frameRate: 12,
+      repeat: 0,
     });
 
     this.scene.start(SCENE_MENU);

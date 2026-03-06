@@ -8,19 +8,38 @@ const SPRITE_SCALE = 0.055;
 const RUN_DRIBBLE_SCALE = 0.197;
 // Idle dribble frames are 320x1434 → match height: 1434 * X = 141 → X = 0.098
 const IDLE_DRIBBLE_SCALE = 0.098;
+// Defensive slide frames are 640x717 → match height: 717 * X = 141 → X = 0.197
+const DEFENSE_SLIDE_SCALE = 0.197;
+// Jumpshot frames are 240x1434 → match height: 1434 * X = 141 → X = 0.098
+const JUMPSHOT_SCALE = 0.098;
+// Stepback frames are 480x717 → match height: 717 * X = 141 → X = 0.197
+const STEPBACK_SCALE = 0.197;
 
 export class PlayerRenderer {
   private graphics: Phaser.GameObjects.Graphics;
   private staticSprite: Phaser.GameObjects.Image | null = null;
   private runDribbleSprite: Phaser.GameObjects.Sprite | null = null;
   private idleDribbleSprite: Phaser.GameObjects.Sprite | null = null;
+  private defSlideLeftSprite: Phaser.GameObjects.Sprite | null = null;
+  private defSlideRightSprite: Phaser.GameObjects.Sprite | null = null;
+  private jumpshotSprite: Phaser.GameObjects.Sprite | null = null;
+  private stepbackSprite: Phaser.GameObjects.Sprite | null = null;
   private nameText: Phaser.GameObjects.Text;
   private shadow: Phaser.GameObjects.Graphics;
 
   private hasRunDribble = false;
   private hasIdleDribble = false;
+  private hasDefSlideLeft = false;
+  private hasDefSlideRight = false;
+  private hasJumpshot = false;
+  private hasStepback = false;
+
   private runDribbleKey = '';
   private idleDribbleKey = '';
+  private defSlideLeftKey = '';
+  private defSlideRightKey = '';
+  private jumpshotKey = '';
+  private stepbackKey = '';
 
   // Visual juice timers
   private flashTimer = 0;
@@ -34,6 +53,10 @@ export class PlayerRenderer {
     spriteKey: string,
     dribbleAnimKey?: string,
     idleDribbleAnimKey?: string,
+    defensiveSlideLeftAnimKey?: string,
+    defensiveSlideRightAnimKey?: string,
+    jumpshotAnimKey?: string,
+    stepbackAnimKey?: string,
   ) {
     this.shadow = scene.add.graphics().setDepth(5);
     this.graphics = scene.add.graphics().setDepth(10);
@@ -58,6 +81,50 @@ export class PlayerRenderer {
       this.idleDribbleSprite.setOrigin(0.5, 0.85);
       this.idleDribbleSprite.setDepth(10);
       this.idleDribbleSprite.setVisible(false);
+    }
+
+    // Defensive slide left
+    if (defensiveSlideLeftAnimKey && scene.anims.exists(defensiveSlideLeftAnimKey)) {
+      this.defSlideLeftKey = defensiveSlideLeftAnimKey;
+      this.hasDefSlideLeft = true;
+      this.defSlideLeftSprite = scene.add.sprite(0, 0, defensiveSlideLeftAnimKey.replace('-anim', ''));
+      this.defSlideLeftSprite.setScale(DEFENSE_SLIDE_SCALE);
+      this.defSlideLeftSprite.setOrigin(0.5, 0.85);
+      this.defSlideLeftSprite.setDepth(10);
+      this.defSlideLeftSprite.setVisible(false);
+    }
+
+    // Defensive slide right
+    if (defensiveSlideRightAnimKey && scene.anims.exists(defensiveSlideRightAnimKey)) {
+      this.defSlideRightKey = defensiveSlideRightAnimKey;
+      this.hasDefSlideRight = true;
+      this.defSlideRightSprite = scene.add.sprite(0, 0, defensiveSlideRightAnimKey.replace('-anim', ''));
+      this.defSlideRightSprite.setScale(DEFENSE_SLIDE_SCALE);
+      this.defSlideRightSprite.setOrigin(0.5, 0.85);
+      this.defSlideRightSprite.setDepth(10);
+      this.defSlideRightSprite.setVisible(false);
+    }
+
+    // Jumpshot
+    if (jumpshotAnimKey && scene.anims.exists(jumpshotAnimKey)) {
+      this.jumpshotKey = jumpshotAnimKey;
+      this.hasJumpshot = true;
+      this.jumpshotSprite = scene.add.sprite(0, 0, jumpshotAnimKey.replace('-anim', ''));
+      this.jumpshotSprite.setScale(JUMPSHOT_SCALE);
+      this.jumpshotSprite.setOrigin(0.5, 0.85);
+      this.jumpshotSprite.setDepth(10);
+      this.jumpshotSprite.setVisible(false);
+    }
+
+    // Stepback
+    if (stepbackAnimKey && scene.anims.exists(stepbackAnimKey)) {
+      this.stepbackKey = stepbackAnimKey;
+      this.hasStepback = true;
+      this.stepbackSprite = scene.add.sprite(0, 0, stepbackAnimKey.replace('-anim', ''));
+      this.stepbackSprite.setScale(STEPBACK_SCALE);
+      this.stepbackSprite.setOrigin(0.5, 0.85);
+      this.stepbackSprite.setDepth(10);
+      this.stepbackSprite.setVisible(false);
     }
 
     // Static sprite (no ball / shooting / defending)
@@ -87,7 +154,6 @@ export class PlayerRenderer {
     // Tick flash timer
     if (this.flashTimer > 0) this.flashTimer -= 1 / 60;
 
-    const isRunning = p.fsm.isInState(PLAYER_STATE.RUN);
     const isDefending = p.fsm.isInState(PLAYER_STATE.DEFENDING);
     const isShooting = p.fsm.isInState(PLAYER_STATE.SHOOTING);
     const isStepback = p.fsm.isInState(PLAYER_STATE.STEPBACK);
@@ -103,6 +169,11 @@ export class PlayerRenderer {
     // Decide which sprite to show
     const useRunDribble = this.hasRunDribble && isMoving && p.hasBall && !isShooting && !isStepback && !isCrossover;
     const useIdleDribble = this.hasIdleDribble && !isMoving && p.hasBall && !isShooting && !isStepback && !isCrossover && !isDefending;
+    const useDefSlideLeft = this.hasDefSlideLeft && isDefending && isMoving && p.velocity.x < 0;
+    const useDefSlideRight = this.hasDefSlideRight && isDefending && isMoving && p.velocity.x >= 0;
+    const useJumpshot = this.hasJumpshot && isShooting;
+    const useStepback = this.hasStepback && isStepback;
+
     this.isDribbleAnimActive = useRunDribble || useIdleDribble;
 
     const depthBase = 10 + (p.position.y / 1000);
@@ -117,10 +188,72 @@ export class PlayerRenderer {
     if (this.staticSprite) this.staticSprite.setVisible(false);
     if (this.runDribbleSprite) this.runDribbleSprite.setVisible(false);
     if (this.idleDribbleSprite) this.idleDribbleSprite.setVisible(false);
+    if (this.defSlideLeftSprite) this.defSlideLeftSprite.setVisible(false);
+    if (this.defSlideRightSprite) this.defSlideRightSprite.setVisible(false);
+    if (this.jumpshotSprite) this.jumpshotSprite.setVisible(false);
+    if (this.stepbackSprite) this.stepbackSprite.setVisible(false);
 
     let activeDisplayHeight = PLAYER_RADIUS * 2;
 
-    if (useRunDribble && this.runDribbleSprite) {
+    if (useJumpshot && this.jumpshotSprite) {
+      // Jumpshot animation
+      this.jumpshotSprite.setVisible(true);
+      this.jumpshotSprite.setDepth(depthBase);
+      this.jumpshotSprite.setPosition(p.position.x, p.position.y);
+      this.jumpshotSprite.setFlipX(Math.cos(p.facingAngle) < 0);
+      this.jumpshotSprite.setScale(JUMPSHOT_SCALE);
+      this.jumpshotSprite.setAlpha(1);
+      if (!this.jumpshotSprite.anims.isPlaying || this.jumpshotSprite.anims.currentAnim?.key !== this.jumpshotKey) {
+        this.jumpshotSprite.play(this.jumpshotKey);
+      }
+      activeDisplayHeight = this.jumpshotSprite.displayHeight;
+
+    } else if (useStepback && this.stepbackSprite) {
+      // Stepback animation
+      this.stepbackSprite.setVisible(true);
+      this.stepbackSprite.setDepth(depthBase);
+      this.stepbackSprite.setPosition(p.position.x, p.position.y);
+      this.stepbackSprite.setFlipX(Math.cos(p.facingAngle) < 0);
+      this.stepbackSprite.setScale(STEPBACK_SCALE);
+      this.stepbackSprite.setAlpha(0.85);
+      if (!this.stepbackSprite.anims.isPlaying || this.stepbackSprite.anims.currentAnim?.key !== this.stepbackKey) {
+        this.stepbackSprite.play(this.stepbackKey);
+      }
+      activeDisplayHeight = this.stepbackSprite.displayHeight;
+
+    } else if (useDefSlideLeft && this.defSlideLeftSprite) {
+      // Defensive slide left
+      this.defSlideLeftSprite.setVisible(true);
+      this.defSlideLeftSprite.setDepth(depthBase);
+      this.defSlideLeftSprite.setPosition(p.position.x, p.position.y);
+      this.defSlideLeftSprite.setScale(DEFENSE_SLIDE_SCALE);
+      this.defSlideLeftSprite.setAlpha(1);
+      if (!this.defSlideLeftSprite.anims.isPlaying || this.defSlideLeftSprite.anims.currentAnim?.key !== this.defSlideLeftKey) {
+        this.defSlideLeftSprite.play(this.defSlideLeftKey);
+      }
+      activeDisplayHeight = this.defSlideLeftSprite.displayHeight;
+      // Defense ring
+      const pulse = 0.4 + Math.sin(Date.now() * 0.006) * 0.2;
+      g.lineStyle(2, 0xffff00, pulse);
+      g.strokeCircle(p.position.x, p.position.y + 2, PLAYER_RADIUS + 4);
+
+    } else if (useDefSlideRight && this.defSlideRightSprite) {
+      // Defensive slide right
+      this.defSlideRightSprite.setVisible(true);
+      this.defSlideRightSprite.setDepth(depthBase);
+      this.defSlideRightSprite.setPosition(p.position.x, p.position.y);
+      this.defSlideRightSprite.setScale(DEFENSE_SLIDE_SCALE);
+      this.defSlideRightSprite.setAlpha(1);
+      if (!this.defSlideRightSprite.anims.isPlaying || this.defSlideRightSprite.anims.currentAnim?.key !== this.defSlideRightKey) {
+        this.defSlideRightSprite.play(this.defSlideRightKey);
+      }
+      activeDisplayHeight = this.defSlideRightSprite.displayHeight;
+      // Defense ring
+      const pulse = 0.4 + Math.sin(Date.now() * 0.006) * 0.2;
+      g.lineStyle(2, 0xffff00, pulse);
+      g.strokeCircle(p.position.x, p.position.y + 2, PLAYER_RADIUS + 4);
+
+    } else if (useRunDribble && this.runDribbleSprite) {
       // Running dribble animation
       this.runDribbleSprite.setVisible(true);
       this.runDribbleSprite.setDepth(depthBase);
@@ -228,6 +361,10 @@ export class PlayerRenderer {
     // Stop animations that aren't active
     if (!useRunDribble && this.runDribbleSprite?.anims.isPlaying) this.runDribbleSprite.stop();
     if (!useIdleDribble && this.idleDribbleSprite?.anims.isPlaying) this.idleDribbleSprite.stop();
+    if (!useDefSlideLeft && this.defSlideLeftSprite?.anims.isPlaying) this.defSlideLeftSprite.stop();
+    if (!useDefSlideRight && this.defSlideRightSprite?.anims.isPlaying) this.defSlideRightSprite.stop();
+    if (!useJumpshot && this.jumpshotSprite?.anims.isPlaying) this.jumpshotSprite.stop();
+    if (!useStepback && this.stepbackSprite?.anims.isPlaying) this.stepbackSprite.stop();
 
     // Name label
     this.nameText.setPosition(p.position.x, p.position.y - activeDisplayHeight * 0.5 - 8);
@@ -239,6 +376,10 @@ export class PlayerRenderer {
     this.staticSprite?.destroy();
     this.runDribbleSprite?.destroy();
     this.idleDribbleSprite?.destroy();
+    this.defSlideLeftSprite?.destroy();
+    this.defSlideRightSprite?.destroy();
+    this.jumpshotSprite?.destroy();
+    this.stepbackSprite?.destroy();
     this.nameText.destroy();
   }
 }

@@ -62,8 +62,14 @@ export class GameScene extends Phaser.Scene {
     // Setup renderers
     this.courtRenderer = new CourtRenderer(this);
     this.playerRenderers = [
-      new PlayerRenderer(this, this.sim.players[0], `P1 ${p1Char.name}`, p1Char.spriteKey, p1Char.dribbleAnimKey, p1Char.idleDribbleAnimKey),
-      new PlayerRenderer(this, this.sim.players[1], `P2 ${p2Char.name}`, p2Char.spriteKey, p2Char.dribbleAnimKey, p2Char.idleDribbleAnimKey),
+      new PlayerRenderer(this, this.sim.players[0], `P1 ${p1Char.name}`, p1Char.spriteKey,
+        p1Char.dribbleAnimKey, p1Char.idleDribbleAnimKey,
+        p1Char.defensiveSlideLeftAnimKey, p1Char.defensiveSlideRightAnimKey,
+        p1Char.jumpshotAnimKey, p1Char.stepbackAnimKey),
+      new PlayerRenderer(this, this.sim.players[1], `P2 ${p2Char.name}`, p2Char.spriteKey,
+        p2Char.dribbleAnimKey, p2Char.idleDribbleAnimKey,
+        p2Char.defensiveSlideLeftAnimKey, p2Char.defensiveSlideRightAnimKey,
+        p2Char.jumpshotAnimKey, p2Char.stepbackAnimKey),
     ];
     this.ballRenderer = new BallRenderer(this, this.sim.ball);
     this.hudRenderer = new HUDRenderer(this, this.sim);

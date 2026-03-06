@@ -16,7 +16,26 @@ export class BootScene extends Phaser.Scene {
     const splash = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'loading-screen');
     splash.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
 
-    this.time.delayedCall(2000, () => {
+    // "PRESS START" overlay
+    const pressStart = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.82, 'PRESS START', {
+      fontSize: '36px',
+      fontFamily: 'monospace',
+      color: '#ffcc00',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 5,
+    }).setOrigin(0.5);
+
+    this.tweens.add({
+      targets: pressStart,
+      alpha: 0.2,
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    // Wait for any key press to proceed
+    this.input.keyboard?.once('keydown', () => {
       this.scene.start(SCENE_PRELOAD);
     });
   }

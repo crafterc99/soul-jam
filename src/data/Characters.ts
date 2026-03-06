@@ -24,6 +24,10 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     spriteKey: 'char-breezy',
     dribbleAnimKey: 'breezy-dribble-anim',
     idleDribbleAnimKey: 'breezy-idle-dribble-anim',
+    defensiveSlideLeftAnimKey: 'breezy-defensive-slide-left-anim',
+    defensiveSlideRightAnimKey: 'breezy-defensive-slide-right-anim',
+    jumpshotAnimKey: 'breezy-jumpshot-anim',
+    stepbackAnimKey: 'breezy-stepback-anim',
     ratings: {
       speed: 75,
       power: 82,

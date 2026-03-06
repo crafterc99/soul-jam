@@ -6,7 +6,13 @@ interface SceneData {
   mode: 'cpu' | 'local2p';
 }
 
-// Card positions matching the playerselect.jpg layout
+// Map character IDs to their player-select background keys
+const SELECT_BG_KEYS: Record<string, string> = {
+  ninetynine: 'select-99',
+  breezy: 'select-breezy',
+};
+
+// Card positions matching the playerselect images
 const LEFT_CARD_X = GAME_WIDTH * 0.27;
 const RIGHT_CARD_X = GAME_WIDTH * 0.73;
 const CARD_CENTER_Y = GAME_HEIGHT * 0.52;
@@ -21,6 +27,9 @@ export class CharacterSelectScene extends Phaser.Scene {
   private p2Confirmed = false;
   private characterIds = Object.keys(CHARACTERS);
   private selectionGroup!: Phaser.GameObjects.Group;
+  private bgImage: Phaser.GameObjects.Image | null = null;
+  private pressStartText: Phaser.GameObjects.Text | null = null;
+  private pressStartTween: Phaser.Tweens.Tween | null = null;
 
   constructor() {
     super({ key: SCENE_CHARACTER_SELECT });
@@ -37,11 +46,28 @@ export class CharacterSelectScene extends Phaser.Scene {
   create(): void {
     this.selectionGroup = this.add.group();
 
-    // Player select image IS the screen - show at full opacity
-    if (this.textures.exists('playerselect-bg')) {
-      const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'playerselect-bg');
-      bg.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
-    }
+    // Player select background - swaps based on P1's selection
+    this.bgImage = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'playerselect-bg');
+    this.bgImage.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+    this.updateBackground();
+
+    // "PRESS START" overlay
+    this.pressStartText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.92, 'PRESS START', {
+      fontSize: '28px',
+      fontFamily: 'monospace',
+      color: '#ffcc00',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(100);
+
+    this.pressStartTween = this.tweens.add({
+      targets: this.pressStartText,
+      alpha: 0.2,
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+    });
 
     this.drawSelectionIndicators();
 
@@ -55,6 +81,15 @@ export class CharacterSelectScene extends Phaser.Scene {
       this.input.keyboard?.on('keydown-LEFT', () => this.navigate(2, -1));
       this.input.keyboard?.on('keydown-RIGHT', () => this.navigate(2, 1));
       this.input.keyboard?.on('keydown-ENTER', () => this.confirm(2));
+    }
+  }
+
+  private updateBackground(): void {
+    const selectedCharId = this.characterIds[this.p1Selection];
+    const bgKey = SELECT_BG_KEYS[selectedCharId];
+    if (bgKey && this.textures.exists(bgKey) && this.bgImage) {
+      this.bgImage.setTexture(bgKey);
+      this.bgImage.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
     }
   }
 
@@ -137,6 +172,7 @@ export class CharacterSelectScene extends Phaser.Scene {
   private navigate(player: number, direction: number): void {
     if (player === 1 && !this.p1Confirmed) {
       this.p1Selection = (this.p1Selection + direction + this.characterIds.length) % this.characterIds.length;
+      this.updateBackground();
     } else if (player === 2 && !this.p2Confirmed) {
       this.p2Selection = (this.p2Selection + direction + this.characterIds.length) % this.characterIds.length;
     }
@@ -153,6 +189,12 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     this.drawSelectionIndicators();
 
+    // Hide "PRESS START" once both confirmed
+    if (this.p1Confirmed && this.p2Confirmed && this.pressStartText) {
+      this.pressStartTween?.stop();
+      this.pressStartText.setVisible(false);
+    }
+
     if (this.p1Confirmed && this.p2Confirmed) {
       this.time.delayedCall(300, () => {
         this.scene.start(SCENE_GAME, {
@@ -168,6 +210,8 @@ export class CharacterSelectScene extends Phaser.Scene {
     if (this.p1Confirmed || this.p2Confirmed) {
       this.p1Confirmed = false;
       this.p2Confirmed = false;
+      if (this.pressStartText) this.pressStartText.setVisible(true);
+      if (this.pressStartTween) this.pressStartTween.resume();
       this.drawSelectionIndicators();
     } else {
       this.scene.start(SCENE_MENU);

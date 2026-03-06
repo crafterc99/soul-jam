@@ -15,5 +15,9 @@ export interface CharacterDef {
   spriteKey: string;         // asset key for character sprite
   dribbleAnimKey?: string;       // running dribble animation
   idleDribbleAnimKey?: string;   // standing/idle dribble animation
+  defensiveSlideLeftAnimKey?: string;
+  defensiveSlideRightAnimKey?: string;
+  jumpshotAnimKey?: string;
+  stepbackAnimKey?: string;
   ratings: CharacterRatings;
 }
