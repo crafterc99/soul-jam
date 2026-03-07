@@ -4,16 +4,19 @@ import { PLAYER_RADIUS } from '../config/Constants';
 import { PLAYER_STATE } from '../simulation/PlayerStates';
 
 const SPRITE_SCALE = 0.055;
-// Running dribble frames are 480x717 → match height: 717 * X = 2571 * 0.055 = 141 → X = 0.197
+// Running dribble frames are 480x717 → 480*0.197=95px wide, 717*0.197=141px tall
 const RUN_DRIBBLE_SCALE = 0.197;
-// Idle/static dribble frames are 640x717 → match height: 717 * X = 141 → X = 0.197
+// Static dribble frames are 640x717 → 640*0.197=126px wide, 717*0.197=141px tall
 const IDLE_DRIBBLE_SCALE = 0.197;
-// Defensive slide frames are 640x717 → match height: 717 * X = 141 → X = 0.197
+// Defensive slide frames are 640x717 → 640*0.197=126px wide, 717*0.197=141px tall
 const DEFENSE_SLIDE_SCALE = 0.197;
-// Jumpshot frames are 384x717 → match height: 717 * X = 141 → X = 0.197
+// Jumpshot frames are 240x1434 (1-row sheet). Same 0.197 scale keeps character art the same
+// pixel size as other anims. Display: 47x282px — narrow but it's a brief shooting pose.
 const JUMPSHOT_SCALE = 0.197;
-// Stepback frames are 480x1434 → match height: 1434 * X = 141 → X = 0.098
-const STEPBACK_SCALE = 0.098;
+// Stepback frames are 480x1434 (1-row sheet). At 0.197: 95x282px — great width, art in top 55%.
+const STEPBACK_SCALE = 0.197;
+// Target display height for name label positioning (matches 717-tall frame anims)
+const STANDARD_DISPLAY_HEIGHT = 141;
 
 export class PlayerRenderer {
   private graphics: Phaser.GameObjects.Graphics;
@@ -105,24 +108,24 @@ export class PlayerRenderer {
       this.defSlideRightSprite.setVisible(false);
     }
 
-    // Jumpshot
+    // Jumpshot (1-row 240x1434 frames — ground line at ~93% from top)
     if (jumpshotAnimKey && scene.anims.exists(jumpshotAnimKey)) {
       this.jumpshotKey = jumpshotAnimKey;
       this.hasJumpshot = true;
       this.jumpshotSprite = scene.add.sprite(0, 0, jumpshotAnimKey.replace('-anim', ''));
       this.jumpshotSprite.setScale(JUMPSHOT_SCALE);
-      this.jumpshotSprite.setOrigin(0.5, 0.85);
+      this.jumpshotSprite.setOrigin(0.5, 0.93);
       this.jumpshotSprite.setDepth(10);
       this.jumpshotSprite.setVisible(false);
     }
 
-    // Stepback
+    // Stepback (1-row 480x1434 frames — feet at ~55% from top)
     if (stepbackAnimKey && scene.anims.exists(stepbackAnimKey)) {
       this.stepbackKey = stepbackAnimKey;
       this.hasStepback = true;
       this.stepbackSprite = scene.add.sprite(0, 0, stepbackAnimKey.replace('-anim', ''));
       this.stepbackSprite.setScale(STEPBACK_SCALE);
-      this.stepbackSprite.setOrigin(0.5, 0.85);
+      this.stepbackSprite.setOrigin(0.5, 0.55);
       this.stepbackSprite.setDepth(10);
       this.stepbackSprite.setVisible(false);
     }
@@ -206,7 +209,7 @@ export class PlayerRenderer {
       if (!this.jumpshotSprite.anims.isPlaying || this.jumpshotSprite.anims.currentAnim?.key !== this.jumpshotKey) {
         this.jumpshotSprite.play(this.jumpshotKey);
       }
-      activeDisplayHeight = this.jumpshotSprite.displayHeight;
+      activeDisplayHeight = STANDARD_DISPLAY_HEIGHT;
 
     } else if (useStepback && this.stepbackSprite) {
       // Stepback animation
@@ -219,7 +222,7 @@ export class PlayerRenderer {
       if (!this.stepbackSprite.anims.isPlaying || this.stepbackSprite.anims.currentAnim?.key !== this.stepbackKey) {
         this.stepbackSprite.play(this.stepbackKey);
       }
-      activeDisplayHeight = this.stepbackSprite.displayHeight;
+      activeDisplayHeight = STANDARD_DISPLAY_HEIGHT;
 
     } else if (useDefSlideLeft && this.defSlideLeftSprite) {
       // Defensive slide left
