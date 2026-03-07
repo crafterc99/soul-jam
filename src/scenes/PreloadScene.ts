@@ -71,15 +71,21 @@ export class PreloadScene extends Phaser.Scene {
       frameHeight: 717,
     });
 
-    // Breezy jumpshot: 8 cols x 1 row = 8 frames, each 240x1434
+    // Breezy jumpshot: 5 cols x 2 rows = 9 frames, each 384x717
     this.load.spritesheet('breezy-jumpshot', 'assets/images/breezy-jumpshot.png', {
-      frameWidth: 240,
+      frameWidth: 384,
+      frameHeight: 717,
+    });
+
+    // Breezy step back: 4 cols x 1 row = 4 frames, each 480x1434
+    this.load.spritesheet('breezy-stepback', 'assets/images/breezy-stepback.png', {
+      frameWidth: 480,
       frameHeight: 1434,
     });
 
-    // Breezy step back: 4 cols x 2 rows, using top row = 4 frames, each 480x717
-    this.load.spritesheet('breezy-stepback', 'assets/images/breezy-stepback.png', {
-      frameWidth: 480,
+    // Breezy static dribble: 3 cols x 2 rows = 6 frames, each 640x717
+    this.load.spritesheet('breezy-static-dribble', 'assets/images/breezy-static-dribble.png', {
+      frameWidth: 640,
       frameHeight: 717,
     });
   }
@@ -120,7 +126,7 @@ export class PreloadScene extends Phaser.Scene {
     // Jumpshot (play once through the shot)
     this.anims.create({
       key: 'breezy-jumpshot-anim',
-      frames: this.anims.generateFrameNumbers('breezy-jumpshot', { start: 0, end: 7 }),
+      frames: this.anims.generateFrameNumbers('breezy-jumpshot', { start: 0, end: 8 }),
       frameRate: 8,
       repeat: 0,
     });
@@ -132,6 +138,17 @@ export class PreloadScene extends Phaser.Scene {
       frameRate: 12,
       repeat: 0,
     });
+
+    // Static dribble animation (standing with ball, better proportions)
+    this.anims.create({
+      key: 'breezy-static-dribble-anim',
+      frames: this.anims.generateFrameNumbers('breezy-static-dribble', { start: 0, end: 5 }),
+      frameRate: 5,
+      repeat: -1,
+    });
+
+    // Crop basketball sprite from the loaded image
+    this.textures.get('basketball').add('ball', 0, 890, 650, 140, 140);
 
     this.scene.start(SCENE_MENU);
   }

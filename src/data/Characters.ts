@@ -23,7 +23,7 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     color: 0xff44aa,
     spriteKey: 'char-breezy',
     dribbleAnimKey: 'breezy-dribble-anim',
-    idleDribbleAnimKey: 'breezy-idle-dribble-anim',
+    idleDribbleAnimKey: 'breezy-static-dribble-anim',
     defensiveSlideLeftAnimKey: 'breezy-defensive-slide-left-anim',
     defensiveSlideRightAnimKey: 'breezy-defensive-slide-right-anim',
     jumpshotAnimKey: 'breezy-jumpshot-anim',

@@ -6,14 +6,14 @@ import { PLAYER_STATE } from '../simulation/PlayerStates';
 const SPRITE_SCALE = 0.055;
 // Running dribble frames are 480x717 → match height: 717 * X = 2571 * 0.055 = 141 → X = 0.197
 const RUN_DRIBBLE_SCALE = 0.197;
-// Idle dribble frames are 320x1434 → match height: 1434 * X = 141 → X = 0.098
-const IDLE_DRIBBLE_SCALE = 0.098;
+// Idle/static dribble frames are 640x717 → match height: 717 * X = 141 → X = 0.197
+const IDLE_DRIBBLE_SCALE = 0.197;
 // Defensive slide frames are 640x717 → match height: 717 * X = 141 → X = 0.197
 const DEFENSE_SLIDE_SCALE = 0.197;
-// Jumpshot frames are 240x1434 → match height: 1434 * X = 141 → X = 0.098
-const JUMPSHOT_SCALE = 0.098;
-// Stepback frames are 480x717 → match height: 717 * X = 141 → X = 0.197
-const STEPBACK_SCALE = 0.197;
+// Jumpshot frames are 384x717 → match height: 717 * X = 141 → X = 0.197
+const JUMPSHOT_SCALE = 0.197;
+// Stepback frames are 480x1434 → match height: 1434 * X = 141 → X = 0.098
+const STEPBACK_SCALE = 0.098;
 
 export class PlayerRenderer {
   private graphics: Phaser.GameObjects.Graphics;
@@ -159,7 +159,7 @@ export class PlayerRenderer {
     const isStepback = p.fsm.isInState(PLAYER_STATE.STEPBACK);
     const isCrossover = p.fsm.isInState(PLAYER_STATE.CROSSOVER);
     const isStealReach = p.fsm.isInState(PLAYER_STATE.STEAL_REACH);
-    const isMoving = p.velocity.length() > 20;
+    const isMoving = p.velocity.length() > 10;
 
     // Trigger flash on burst move start
     if ((isStepback || isCrossover) && p.stateTimer < 0.03) {
