@@ -47,46 +47,27 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('select-99', 'assets/images/99-player-select.webp');
     this.load.image('select-breezy', 'assets/images/breezy-player-select.webp');
 
-    // Breezy running dribble: 4 cols x 2 rows = 8 frames, each 480x717
+    // All Breezy animations use uniform 176x176 frame cells (4 cols x 2 rows grids)
     this.load.spritesheet('breezy-dribble', 'assets/images/breezy-dribble.png', {
-      frameWidth: 480,
-      frameHeight: 717,
+      frameWidth: 176, frameHeight: 176,
     });
-
-    // Breezy idle/standing dribble: 6 cols x 1 row = 6 frames, each 320x1434
     this.load.spritesheet('breezy-idle-dribble', 'assets/images/breezy-idle-dribble.png', {
-      frameWidth: 320,
-      frameHeight: 1434,
+      frameWidth: 320, frameHeight: 1434,
     });
-
-    // Breezy defensive slide left: 4 cols x 2 rows grid, 6 usable frames, each 480x717
     this.load.spritesheet('breezy-defensive-slide-left', 'assets/images/breezy-defensive-slide-left.png', {
-      frameWidth: 480,
-      frameHeight: 717,
+      frameWidth: 480, frameHeight: 717,
     });
-
-    // Breezy defensive slide right: 4 cols x 2 rows grid, 6 usable frames, each 480x717
     this.load.spritesheet('breezy-defensive-slide-right', 'assets/images/breezy-defensive-slide-right.png', {
-      frameWidth: 480,
-      frameHeight: 717,
+      frameWidth: 480, frameHeight: 717,
     });
-
-    // Breezy jumpshot: 4 cols x 2 rows, 7 usable frames, each 480x1000
     this.load.spritesheet('breezy-jumpshot', 'assets/images/breezy-jumpshot.png', {
-      frameWidth: 480,
-      frameHeight: 1000,
+      frameWidth: 176, frameHeight: 176,
     });
-
-    // Breezy step back: 4 cols x 2 rows = 4 usable frames (top row), each 480x717
     this.load.spritesheet('breezy-stepback', 'assets/images/breezy-stepback.png', {
-      frameWidth: 480,
-      frameHeight: 717,
+      frameWidth: 176, frameHeight: 176,
     });
-
-    // Breezy static dribble: 4 cols x 2 rows grid, 6 usable frames, each 480x717
     this.load.spritesheet('breezy-static-dribble', 'assets/images/breezy-static-dribble.png', {
-      frameWidth: 480,
-      frameHeight: 717,
+      frameWidth: 176, frameHeight: 176,
     });
   }
 
@@ -126,7 +107,7 @@ export class PreloadScene extends Phaser.Scene {
     // Jumpshot (play once through the shot)
     this.anims.create({
       key: 'breezy-jumpshot-anim',
-      frames: this.anims.generateFrameNumbers('breezy-jumpshot', { start: 0, end: 6 }),
+      frames: this.anims.generateFrameNumbers('breezy-jumpshot', { start: 0, end: 6 }),  // 7 frames
       frameRate: 12,
       repeat: 0,
     });

@@ -4,11 +4,11 @@ import { PLAYER_RADIUS } from '../config/Constants';
 import { PLAYER_STATE } from '../simulation/PlayerStates';
 
 const SPRITE_SCALE = 0.055;
-// All 480x717 animations use the same scale/origin as the running dribble (the gold standard)
-const ANIM_SCALE = 0.197;
-// Jumpshot frames are 480x1000 (character reaching up). Scale up so body width ~matches dribble.
-// Avg art ~280px wide; at 0.28 displays at 78px (close to dribble's ~79px character width).
-const JUMPSHOT_SCALE = 0.28;
+// All animations use uniform 176x176 cells. Scale 1.13 → ~80px character display width.
+// Same scale, same origin for every animation — no per-anim recalibration.
+const ANIM_SCALE = 1.13;
+// Defense slides are still 480x717 from earlier reprocessing
+const DEFENSE_SLIDE_SCALE = 0.197;
 
 export class PlayerRenderer {
   private graphics: Phaser.GameObjects.Graphics;
@@ -56,68 +56,64 @@ export class PlayerRenderer {
     this.shadow = scene.add.graphics().setDepth(5);
     this.graphics = scene.add.graphics().setDepth(10);
 
-    // Running dribble animation (480x717 — the reference animation)
+    // All 176x176 animations use ANIM_SCALE and origin (0.5, 0.97)
     if (dribbleAnimKey && scene.anims.exists(dribbleAnimKey)) {
       this.runDribbleKey = dribbleAnimKey;
       this.hasRunDribble = true;
       this.runDribbleSprite = scene.add.sprite(0, 0, dribbleAnimKey.replace('-anim', ''));
       this.runDribbleSprite.setScale(ANIM_SCALE);
-      this.runDribbleSprite.setOrigin(0.5, 0.85);
+      this.runDribbleSprite.setOrigin(0.5, 0.97);
       this.runDribbleSprite.setDepth(10);
       this.runDribbleSprite.setVisible(false);
     }
 
-    // Idle dribble animation (480x717 — reprocessed to match dribble frame size)
     if (idleDribbleAnimKey && scene.anims.exists(idleDribbleAnimKey)) {
       this.idleDribbleKey = idleDribbleAnimKey;
       this.hasIdleDribble = true;
       this.idleDribbleSprite = scene.add.sprite(0, 0, idleDribbleAnimKey.replace('-anim', ''));
       this.idleDribbleSprite.setScale(ANIM_SCALE);
-      this.idleDribbleSprite.setOrigin(0.5, 0.85);
+      this.idleDribbleSprite.setOrigin(0.5, 0.97);
       this.idleDribbleSprite.setDepth(10);
       this.idleDribbleSprite.setVisible(false);
     }
 
-    // Defensive slide left (480x717 — reprocessed to match dribble frame size)
+    // Defense slides still use 480x717 frames (separate assets)
     if (defensiveSlideLeftAnimKey && scene.anims.exists(defensiveSlideLeftAnimKey)) {
       this.defSlideLeftKey = defensiveSlideLeftAnimKey;
       this.hasDefSlideLeft = true;
       this.defSlideLeftSprite = scene.add.sprite(0, 0, defensiveSlideLeftAnimKey.replace('-anim', ''));
-      this.defSlideLeftSprite.setScale(ANIM_SCALE);
+      this.defSlideLeftSprite.setScale(DEFENSE_SLIDE_SCALE);
       this.defSlideLeftSprite.setOrigin(0.5, 0.85);
       this.defSlideLeftSprite.setDepth(10);
       this.defSlideLeftSprite.setVisible(false);
     }
 
-    // Defensive slide right (480x717 — reprocessed to match dribble frame size)
     if (defensiveSlideRightAnimKey && scene.anims.exists(defensiveSlideRightAnimKey)) {
       this.defSlideRightKey = defensiveSlideRightAnimKey;
       this.hasDefSlideRight = true;
       this.defSlideRightSprite = scene.add.sprite(0, 0, defensiveSlideRightAnimKey.replace('-anim', ''));
-      this.defSlideRightSprite.setScale(ANIM_SCALE);
+      this.defSlideRightSprite.setScale(DEFENSE_SLIDE_SCALE);
       this.defSlideRightSprite.setOrigin(0.5, 0.85);
       this.defSlideRightSprite.setDepth(10);
       this.defSlideRightSprite.setVisible(false);
     }
 
-    // Jumpshot (480x1150 — taller frames for jumping pose, calibrated scale)
     if (jumpshotAnimKey && scene.anims.exists(jumpshotAnimKey)) {
       this.jumpshotKey = jumpshotAnimKey;
       this.hasJumpshot = true;
       this.jumpshotSprite = scene.add.sprite(0, 0, jumpshotAnimKey.replace('-anim', ''));
-      this.jumpshotSprite.setScale(JUMPSHOT_SCALE);
+      this.jumpshotSprite.setScale(ANIM_SCALE);
       this.jumpshotSprite.setOrigin(0.5, 0.97);
       this.jumpshotSprite.setDepth(10);
       this.jumpshotSprite.setVisible(false);
     }
 
-    // Stepback (480x717 — same frame size as dribble)
     if (stepbackAnimKey && scene.anims.exists(stepbackAnimKey)) {
       this.stepbackKey = stepbackAnimKey;
       this.hasStepback = true;
       this.stepbackSprite = scene.add.sprite(0, 0, stepbackAnimKey.replace('-anim', ''));
       this.stepbackSprite.setScale(ANIM_SCALE);
-      this.stepbackSprite.setOrigin(0.5, 0.85);
+      this.stepbackSprite.setOrigin(0.5, 0.97);
       this.stepbackSprite.setDepth(10);
       this.stepbackSprite.setVisible(false);
     }
@@ -196,8 +192,7 @@ export class PlayerRenderer {
       this.jumpshotSprite.setDepth(depthBase);
       this.jumpshotSprite.setPosition(p.position.x, p.position.y);
       this.jumpshotSprite.setFlipX(Math.cos(p.facingAngle) < 0);
-      this.jumpshotSprite.setScale(JUMPSHOT_SCALE);
-      this.jumpshotSprite.setOrigin(0.5, 0.97);
+      this.jumpshotSprite.setScale(ANIM_SCALE);
       this.jumpshotSprite.setAlpha(1);
       if (!this.jumpshotSprite.anims.isPlaying || this.jumpshotSprite.anims.currentAnim?.key !== this.jumpshotKey) {
         this.jumpshotSprite.play(this.jumpshotKey);
@@ -222,7 +217,7 @@ export class PlayerRenderer {
       this.defSlideLeftSprite.setVisible(true);
       this.defSlideLeftSprite.setDepth(depthBase);
       this.defSlideLeftSprite.setPosition(p.position.x, p.position.y);
-      this.defSlideLeftSprite.setScale(ANIM_SCALE);
+      this.defSlideLeftSprite.setScale(DEFENSE_SLIDE_SCALE);
       this.defSlideLeftSprite.setAlpha(1);
       if (!this.defSlideLeftSprite.anims.isPlaying || this.defSlideLeftSprite.anims.currentAnim?.key !== this.defSlideLeftKey) {
         this.defSlideLeftSprite.play(this.defSlideLeftKey);
@@ -238,7 +233,7 @@ export class PlayerRenderer {
       this.defSlideRightSprite.setVisible(true);
       this.defSlideRightSprite.setDepth(depthBase);
       this.defSlideRightSprite.setPosition(p.position.x, p.position.y);
-      this.defSlideRightSprite.setScale(ANIM_SCALE);
+      this.defSlideRightSprite.setScale(DEFENSE_SLIDE_SCALE);
       this.defSlideRightSprite.setAlpha(1);
       if (!this.defSlideRightSprite.anims.isPlaying || this.defSlideRightSprite.anims.currentAnim?.key !== this.defSlideRightKey) {
         this.defSlideRightSprite.play(this.defSlideRightKey);
