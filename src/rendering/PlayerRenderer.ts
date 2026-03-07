@@ -191,7 +191,7 @@ export class PlayerRenderer {
       // Jumpshot animation — plays once then holds last frame (follow-through)
       this.jumpshotSprite.setVisible(true);
       this.jumpshotSprite.setDepth(depthBase);
-      this.jumpshotSprite.setPosition(p.position.x, p.position.y);
+      this.jumpshotSprite.setPosition(p.position.x, p.position.y - p.jumpHeight);
       this.jumpshotSprite.setFlipX(Math.cos(p.facingAngle) < 0);
       this.jumpshotSprite.setScale(ANIM_SCALE);
       this.jumpshotSprite.setAlpha(1);
