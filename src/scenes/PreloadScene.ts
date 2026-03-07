@@ -71,16 +71,16 @@ export class PreloadScene extends Phaser.Scene {
       frameHeight: 717,
     });
 
-    // Breezy jumpshot: 8 cols x 1 row = 8 frames, each 240x1434
+    // Breezy jumpshot: 4 cols x 2 rows = 8 frames, each 480x1150 (reprocessed from 240px-wide)
     this.load.spritesheet('breezy-jumpshot', 'assets/images/breezy-jumpshot.png', {
-      frameWidth: 240,
-      frameHeight: 1434,
+      frameWidth: 480,
+      frameHeight: 1150,
     });
 
-    // Breezy step back: 4 cols x 1 row = 4 frames, each 480x1434
+    // Breezy step back: 4 cols x 2 rows = 4 usable frames (top row), each 480x717
     this.load.spritesheet('breezy-stepback', 'assets/images/breezy-stepback.png', {
       frameWidth: 480,
-      frameHeight: 1434,
+      frameHeight: 717,
     });
 
     // Breezy static dribble: 3 cols x 2 rows = 6 frames, each 640x717
@@ -127,7 +127,7 @@ export class PreloadScene extends Phaser.Scene {
     this.anims.create({
       key: 'breezy-jumpshot-anim',
       frames: this.anims.generateFrameNumbers('breezy-jumpshot', { start: 0, end: 7 }),
-      frameRate: 8,
+      frameRate: 12,
       repeat: 0,
     });
 
@@ -135,7 +135,7 @@ export class PreloadScene extends Phaser.Scene {
     this.anims.create({
       key: 'breezy-stepback-anim',
       frames: this.anims.generateFrameNumbers('breezy-stepback', { start: 0, end: 3 }),
-      frameRate: 12,
+      frameRate: 14,
       repeat: 0,
     });
 
@@ -143,12 +143,12 @@ export class PreloadScene extends Phaser.Scene {
     this.anims.create({
       key: 'breezy-static-dribble-anim',
       frames: this.anims.generateFrameNumbers('breezy-static-dribble', { start: 0, end: 5 }),
-      frameRate: 5,
+      frameRate: 8,
       repeat: -1,
     });
 
-    // Crop basketball sprite from the loaded image
-    this.textures.get('basketball').add('ball', 0, 890, 650, 140, 140);
+    // Crop basketball sprite from the loaded image (ball at 960,635 → 1074,749 = 114x114px)
+    this.textures.get('basketball').add('ball', 0, 957, 632, 120, 120);
 
     this.scene.start(SCENE_MENU);
   }
