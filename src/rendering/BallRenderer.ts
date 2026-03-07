@@ -12,11 +12,10 @@ export class BallRenderer {
     this.shadow = scene.add.graphics().setDepth(5);
     this.graphics = scene.add.graphics().setDepth(50);
 
-    // Use basketball sprite if the cropped frame exists
-    const tex = scene.textures.get('basketball');
-    if (tex && tex.has('ball')) {
-      this.sprite = scene.add.image(0, 0, 'basketball', 'ball');
-      const diameter = BALL_RADIUS * 2;
+    // Use basketball sprite
+    if (scene.textures.exists('basketball')) {
+      this.sprite = scene.add.image(0, 0, 'basketball');
+      const diameter = BALL_RADIUS * 2.8;  // slightly bigger than hitbox
       this.sprite.setDisplaySize(diameter, diameter);
       this.sprite.setDepth(50);
       this.sprite.setVisible(false);

@@ -41,7 +41,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('playerselect-bg', 'assets/images/playerselect.jpg');
     this.load.image('char-99', 'assets/images/99full.png');
     this.load.image('char-breezy', 'assets/images/breezyfull.png');
-    this.load.image('basketball', 'assets/images/basketball.png');
+    this.load.image('basketball', 'assets/images/basketball.png');  // pre-cropped 124x124
 
     // Player select backgrounds
     this.load.image('select-99', 'assets/images/99-player-select.webp');
@@ -129,9 +129,6 @@ export class PreloadScene extends Phaser.Scene {
       frameRate: 8,
       repeat: -1,
     });
-
-    // Crop basketball sprite from the loaded image (ball at 960,635 → 1074,749 = 114x114px)
-    this.textures.get('basketball').add('ball', 0, 957, 632, 120, 120);
 
     this.scene.start(SCENE_MENU);
   }
