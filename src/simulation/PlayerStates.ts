@@ -1,6 +1,7 @@
 import { State } from './StateMachine';
 import { PlayerSim } from './PlayerSim';
 import { MovementModel } from './models/MovementModel';
+import { Vector2 } from '../utils/Vector2';
 import { CROSSOVER_DURATION, STEPBACK_DURATION, STEAL_FREEZE_DURATION } from '../config/Constants';
 
 export const PLAYER_STATE = {
@@ -158,10 +159,13 @@ export class CrossoverState implements State<PlayerSim> {
 
 export class ShootingState implements State<PlayerSim> {
   name = PLAYER_STATE.SHOOTING;
+  private groundY = 0;
 
   enter(player: PlayerSim): void {
     player.stateTimer = 0;
     player.shotReleased = false;
+    this.groundY = player.position.y;
+    player.jumpHeight = 0;
   }
 
   update(player: PlayerSim, dt: number): void {
@@ -169,6 +173,14 @@ export class ShootingState implements State<PlayerSim> {
     if (!input) return;
 
     player.stateTimer += dt;
+
+    // Jump arc: rise for ~0.4s then fall
+    const jumpDuration = 0.6;
+    const jumpPeak = 30; // pixels upward
+    const t = Math.min(player.stateTimer / jumpDuration, 1);
+    const arc = Math.sin(t * Math.PI); // 0→1→0 arc
+    player.jumpHeight = arc * jumpPeak;
+    player.position = new Vector2(player.position.x, this.groundY - player.jumpHeight);
 
     // Wait for shoot release to actually trigger the shot
     if (input.shootReleased && !player.shotReleased) {
@@ -179,6 +191,8 @@ export class ShootingState implements State<PlayerSim> {
     // After release, brief follow-through animation then return to idle
     if (player.shotReleased) {
       if (player.stateTimer > player.shotTimingValue + 0.3) {
+        player.position = new Vector2(player.position.x, this.groundY);
+        player.jumpHeight = 0;
         player.fsm.setState(PLAYER_STATE.IDLE);
       }
     }
@@ -189,7 +203,7 @@ export class ShootingState implements State<PlayerSim> {
       player.shotTimingValue = player.stateTimer;
     }
 
-    // Player is stationary while shooting
+    // Player is stationary horizontally while shooting
     player.velocity = player.velocity.scale(0);
   }
 }

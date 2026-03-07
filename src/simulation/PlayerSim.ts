@@ -31,6 +31,7 @@ export class PlayerSim {
   // Shooting
   shotReleased: boolean = false;
   shotTimingValue: number = 0;
+  jumpHeight: number = 0;
 
   // Steal
   stealCooldown: number = 0;

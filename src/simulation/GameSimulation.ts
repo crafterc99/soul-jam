@@ -14,6 +14,7 @@ import { CharacterDef } from '../data/CharacterRatings';
 import {
   PLAYER_RADIUS, POINTS_TWO, POINTS_THREE,
   STEAL_RANGE, STEAL_BASE_CHANCE, STEAL_COOLDOWN,
+  STEPBACK_DEFENDER_FREEZE, CROSSOVER_DEFENDER_SHIFT,
 } from '../config/Constants';
 
 export class GameSimulation {
@@ -234,6 +235,10 @@ export class GameSimulation {
     const awayFromHoop = offense.position.subtract(this.court.hoopPosition).normalize();
     offense.stepbackVelocity = awayFromHoop.scale(result.burstVelocity);
     offense.fsm.setState(PLAYER_STATE.STEPBACK);
+
+    // Freeze defender for 1s — stepback creates real separation advantage
+    defense.fsm.setState(PLAYER_STATE.STEAL_REACH);
+    defense.stateTimer = -(STEPBACK_DEFENDER_FREEZE - 0.5); // extend freeze beyond normal 0.5s
   }
 
   private executeCrossover(offense: PlayerSim, defense: PlayerSim): void {
@@ -265,9 +270,13 @@ export class GameSimulation {
       crossDir = dot >= 0 ? perpendicular : perpendicular.scale(-1);
     }
 
-    // Apply lateral burst to offense (no defender teleporting)
+    // Apply lateral burst to offense
     offense.crossoverVelocity = crossDir.scale(result.burstVelocity);
     offense.fsm.setState(PLAYER_STATE.CROSSOVER);
+
+    // Crossover shifts defender in the WRONG direction (they bite on the fake)
+    const fakeDir = crossDir.scale(-1); // opposite of offense's actual direction
+    defense.position = defense.position.add(fakeDir.scale(CROSSOVER_DEFENDER_SHIFT));
   }
 
   private executeSteal(offense: PlayerSim, defense: PlayerSim): void {
@@ -348,7 +357,14 @@ export class GameSimulation {
     const willScore = ShotModel.rollShot(probability);
 
     offense.hasBall = false;
-    this.ball.launchShot(offense.position, this.court.hoopPosition, willScore);
+
+    // Release ball from above player's head, slightly toward hoop
+    const toHoop = this.court.hoopPosition.subtract(offense.position).normalize();
+    const releasePos = new Vector2(
+      offense.position.x + toHoop.x * 10,
+      offense.position.y - offense.jumpHeight - 20, // above head during jump
+    );
+    this.ball.launchShot(releasePos, this.court.hoopPosition, willScore);
 
     this.phaseManager.setPhase(GamePhase.Shooting);
   }
@@ -356,14 +372,29 @@ export class GameSimulation {
   private resolvePlayerCollision(): void {
     const p1 = this.players[0];
     const p2 = this.players[1];
+    const offense = this.offensePlayer;
     const dist = p1.position.distanceTo(p2.position);
     const minDist = PLAYER_RADIUS * 2;
+
+    // During stepback dead ball, offense can't be pushed
+    const isStepbackDeadBall = offense.fsm.isInState(PLAYER_STATE.STEPBACK) &&
+      offense.stateTimer >= offense.stepbackDuration;
 
     if (dist < minDist && dist > 0) {
       const overlap = minDist - dist;
       const pushDir = p1.position.subtract(p2.position).normalize();
-      p1.position = p1.position.add(pushDir.scale(overlap / 2));
-      p2.position = p2.position.add(pushDir.scale(-overlap / 2));
+      if (isStepbackDeadBall) {
+        // Only push the defender away, offense holds position
+        const defIdx = offense === p1 ? 1 : 0;
+        if (defIdx === 1) {
+          p2.position = p2.position.add(pushDir.scale(-overlap));
+        } else {
+          p1.position = p1.position.add(pushDir.scale(overlap));
+        }
+      } else {
+        p1.position = p1.position.add(pushDir.scale(overlap / 2));
+        p2.position = p2.position.add(pushDir.scale(-overlap / 2));
+      }
     }
   }
 
