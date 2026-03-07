@@ -165,8 +165,8 @@ export class PlayerRenderer {
     const useJumpshot = this.hasJumpshot && isShooting;
     const useStepback = this.hasStepback && isStepback;
 
-    // Hide ball during stepback (dead ball — no dribble, would be a travel)
-    this.isDribbleAnimActive = useRunDribble || useIdleDribble || useStepback;
+    // Hide ball during stepback (dead ball) and jumpshot (ball is in the animation)
+    this.isDribbleAnimActive = useRunDribble || useIdleDribble || useStepback || useJumpshot;
 
     const depthBase = 10 + (p.position.y / 1000);
     g.setDepth(depthBase);

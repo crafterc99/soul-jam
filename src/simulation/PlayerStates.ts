@@ -172,11 +172,16 @@ export class ShootingState implements State<PlayerSim> {
 
     player.stateTimer += dt;
 
-    // Visual jump arc (doesn't move game position — only used by renderer)
-    const jumpDuration = 0.6;
+    // Visual jump arc: plant for first 2 frames (0.25s at 8fps), then jump
+    const plantTime = 0.25; // frames 0-1 on the ground
+    const jumpDuration = 0.5;
     const jumpPeak = 30;
-    const t = Math.min(player.stateTimer / jumpDuration, 1);
-    player.jumpHeight = Math.sin(t * Math.PI) * jumpPeak;
+    if (player.stateTimer <= plantTime) {
+      player.jumpHeight = 0; // planting feet
+    } else {
+      const jumpT = Math.min((player.stateTimer - plantTime) / jumpDuration, 1);
+      player.jumpHeight = Math.sin(jumpT * Math.PI) * jumpPeak;
+    }
 
     // Wait for shoot release to actually trigger the shot
     if (input.shootReleased && !player.shotReleased) {

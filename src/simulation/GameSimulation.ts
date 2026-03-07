@@ -358,11 +358,13 @@ export class GameSimulation {
 
     offense.hasBall = false;
 
-    // Release ball from above player's head, slightly toward hoop
+    // Release ball from top of sprite frame (where hands are in the animation)
+    // Sprite: 176px at scale 1.13, origin 0.97 → top of frame is ~193px above feet
+    const spriteTopOffset = 176 * 1.13 * 0.97; // distance from position to top of frame
     const toHoop = this.court.hoopPosition.subtract(offense.position).normalize();
     const releasePos = new Vector2(
-      offense.position.x + toHoop.x * 10,
-      offense.position.y - offense.jumpHeight - 20, // above head during jump
+      offense.position.x + toHoop.x * 8,
+      offense.position.y - offense.jumpHeight - spriteTopOffset,
     );
     this.ball.launchShot(releasePos, this.court.hoopPosition, willScore);
 
