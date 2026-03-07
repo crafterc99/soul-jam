@@ -39,8 +39,8 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('court', 'assets/images/court.webp');
     this.load.image('loading-screen', 'assets/images/loading-screen.webp');
     this.load.image('playerselect-bg', 'assets/images/playerselect.jpg');
-    this.load.image('char-99', 'assets/images/99full.webp');
-    this.load.image('char-breezy', 'assets/images/breezyfull.webp');
+    this.load.image('char-99', 'assets/images/99full.png');
+    this.load.image('char-breezy', 'assets/images/breezyfull.png');
     this.load.image('basketball', 'assets/images/basketball.png');
 
     // Player select backgrounds
