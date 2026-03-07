@@ -6,9 +6,9 @@ import { PLAYER_STATE } from '../simulation/PlayerStates';
 const SPRITE_SCALE = 0.055;
 // All 480x717 animations use the same scale/origin as the running dribble (the gold standard)
 const ANIM_SCALE = 0.197;
-// Jumpshot frames are 480x1150 (character reaching up). Scale up so body width matches dribble.
-// Art is 240px wide; at 0.32 it displays at 77px (close to dribble's ~82px character width).
-const JUMPSHOT_SCALE = 0.32;
+// Jumpshot frames are 480x1000 (character reaching up). Scale up so body width ~matches dribble.
+// Avg art ~280px wide; at 0.28 displays at 78px (close to dribble's ~79px character width).
+const JUMPSHOT_SCALE = 0.28;
 
 export class PlayerRenderer {
   private graphics: Phaser.GameObjects.Graphics;
@@ -106,8 +106,7 @@ export class PlayerRenderer {
       this.hasJumpshot = true;
       this.jumpshotSprite = scene.add.sprite(0, 0, jumpshotAnimKey.replace('-anim', ''));
       this.jumpshotSprite.setScale(JUMPSHOT_SCALE);
-      this.jumpshotSprite.setOrigin(0.5, 0.93);
-      this.jumpshotSprite.setOrigin(0.5, 0.93);
+      this.jumpshotSprite.setOrigin(0.5, 0.97);
       this.jumpshotSprite.setDepth(10);
       this.jumpshotSprite.setVisible(false);
     }
@@ -198,7 +197,7 @@ export class PlayerRenderer {
       this.jumpshotSprite.setPosition(p.position.x, p.position.y);
       this.jumpshotSprite.setFlipX(Math.cos(p.facingAngle) < 0);
       this.jumpshotSprite.setScale(JUMPSHOT_SCALE);
-      this.jumpshotSprite.setOrigin(0.5, 0.93);
+      this.jumpshotSprite.setOrigin(0.5, 0.97);
       this.jumpshotSprite.setAlpha(1);
       if (!this.jumpshotSprite.anims.isPlaying || this.jumpshotSprite.anims.currentAnim?.key !== this.jumpshotKey) {
         this.jumpshotSprite.play(this.jumpshotKey);

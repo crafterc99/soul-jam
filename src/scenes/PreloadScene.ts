@@ -71,10 +71,10 @@ export class PreloadScene extends Phaser.Scene {
       frameHeight: 717,
     });
 
-    // Breezy jumpshot: 4 cols x 2 rows = 8 frames, each 480x1150 (reprocessed from 240px-wide)
+    // Breezy jumpshot: 4 cols x 2 rows, 7 usable frames, each 480x1000
     this.load.spritesheet('breezy-jumpshot', 'assets/images/breezy-jumpshot.png', {
       frameWidth: 480,
-      frameHeight: 1150,
+      frameHeight: 1000,
     });
 
     // Breezy step back: 4 cols x 2 rows = 4 usable frames (top row), each 480x717
@@ -126,7 +126,7 @@ export class PreloadScene extends Phaser.Scene {
     // Jumpshot (play once through the shot)
     this.anims.create({
       key: 'breezy-jumpshot-anim',
-      frames: this.anims.generateFrameNumbers('breezy-jumpshot', { start: 0, end: 7 }),
+      frames: this.anims.generateFrameNumbers('breezy-jumpshot', { start: 0, end: 6 }),
       frameRate: 12,
       repeat: 0,
     });
