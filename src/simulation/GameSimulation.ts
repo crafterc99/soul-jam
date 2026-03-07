@@ -154,6 +154,9 @@ export class GameSimulation {
     if (offenseInput.shootPressed && offense.hasBall &&
         !offense.fsm.isInState(PLAYER_STATE.SHOOTING) &&
         (!offenseInBurstMove || stepbackDeadBall)) {
+      // Face towards hoop when shooting
+      const toHoopDir = this.court.hoopPosition.subtract(offense.position);
+      offense.facingAngle = Math.atan2(toHoopDir.y, toHoopDir.x);
       offense.fsm.setState(PLAYER_STATE.SHOOTING);
     }
 
@@ -167,6 +170,12 @@ export class GameSimulation {
         !defense.fsm.isInState(PLAYER_STATE.STEAL_REACH) &&
         defense.stealCooldown <= 0) {
       this.executeSteal(offense, defense);
+    }
+
+    // Ball handler faces towards hoop when idle (after stopping from dribble)
+    if (offense.hasBall && offense.fsm.isInState(PLAYER_STATE.IDLE)) {
+      const toHoopDir = this.court.hoopPosition.subtract(offense.position);
+      offense.facingAngle = Math.atan2(toHoopDir.y, toHoopDir.x);
     }
 
     // Update players

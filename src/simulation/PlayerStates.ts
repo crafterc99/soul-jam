@@ -176,8 +176,8 @@ export class ShootingState implements State<PlayerSim> {
     const plantTime = 0.25; // frames 0-1 on the ground
     const jumpDuration = 0.5;
     const jumpPeak = 30;
-    if (player.stateTimer <= plantTime) {
-      player.jumpHeight = 0; // planting feet
+    if (player.stateTimer < plantTime) {
+      player.jumpHeight = 0; // planting feet (frames 0-1)
     } else {
       const jumpT = Math.min((player.stateTimer - plantTime) / jumpDuration, 1);
       player.jumpHeight = Math.sin(jumpT * Math.PI) * jumpPeak;
