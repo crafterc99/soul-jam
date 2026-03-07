@@ -59,15 +59,15 @@ export class PreloadScene extends Phaser.Scene {
       frameHeight: 1434,
     });
 
-    // Breezy defensive slide left: 3 cols x 2 rows = 6 frames, each 640x717
+    // Breezy defensive slide left: 4 cols x 2 rows grid, 6 usable frames, each 480x717
     this.load.spritesheet('breezy-defensive-slide-left', 'assets/images/breezy-defensive-slide-left.png', {
-      frameWidth: 640,
+      frameWidth: 480,
       frameHeight: 717,
     });
 
-    // Breezy defensive slide right: 3 cols x 2 rows = 6 frames, each 640x717
+    // Breezy defensive slide right: 4 cols x 2 rows grid, 6 usable frames, each 480x717
     this.load.spritesheet('breezy-defensive-slide-right', 'assets/images/breezy-defensive-slide-right.png', {
-      frameWidth: 640,
+      frameWidth: 480,
       frameHeight: 717,
     });
 
@@ -83,9 +83,9 @@ export class PreloadScene extends Phaser.Scene {
       frameHeight: 717,
     });
 
-    // Breezy static dribble: 3 cols x 2 rows = 6 frames, each 640x717
+    // Breezy static dribble: 4 cols x 2 rows grid, 6 usable frames, each 480x717
     this.load.spritesheet('breezy-static-dribble', 'assets/images/breezy-static-dribble.png', {
-      frameWidth: 640,
+      frameWidth: 480,
       frameHeight: 717,
     });
   }
