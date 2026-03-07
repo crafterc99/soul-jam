@@ -119,17 +119,17 @@ export class StepbackState implements State<PlayerSim> {
   update(player: PlayerSim, dt: number): void {
     player.stateTimer += dt;
 
-    // Stepback lasts for STEPBACK_DURATION, then returns to idle
-    if (player.stateTimer >= player.stepbackDuration) {
-      player.fsm.setState(PLAYER_STATE.IDLE);
-      return;
+    // During movement phase, move away from hoop at burst speed
+    if (player.stateTimer < player.stepbackDuration) {
+      const progress = player.stateTimer / player.stepbackDuration;
+      const speedCurve = 1 - progress; // decelerate over time
+      const stepVel = player.stepbackVelocity.scale(speedCurve);
+      player.position = player.position.add(stepVel.scale(dt));
     }
 
-    // During stepback, move away from hoop at burst speed
-    const progress = player.stateTimer / player.stepbackDuration;
-    const speedCurve = 1 - progress; // decelerate over time
-    const stepVel = player.stepbackVelocity.scale(speedCurve);
-    player.position = player.position.add(stepVel.scale(dt));
+    // After movement: dead ball — player holds position, can only shoot
+    // (no transition to IDLE — shooting input is checked in GameSimulation)
+    player.velocity = player.velocity.scale(0);
   }
 }
 

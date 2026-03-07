@@ -52,7 +52,7 @@ export const TIMING_GOOD_BONUS = 0.05;
 export const TIMING_EARLY_PENALTY = -0.08;
 
 // Separation
-export const STEPBACK_DURATION = 0.3;
+export const STEPBACK_DURATION = 0.35;
 export const STEPBACK_DISTANCE = 30;
 export const CROSSOVER_DURATION = 0.3;
 export const CROSSOVER_SHIFT_DISTANCE = 40;

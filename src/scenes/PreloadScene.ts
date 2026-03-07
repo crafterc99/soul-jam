@@ -104,20 +104,22 @@ export class PreloadScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    // Jumpshot (play once through the shot)
+    // Jumpshot (play once, hold last frame)
     this.anims.create({
       key: 'breezy-jumpshot-anim',
-      frames: this.anims.generateFrameNumbers('breezy-jumpshot', { start: 0, end: 6 }),  // 7 frames
-      frameRate: 12,
+      frames: this.anims.generateFrameNumbers('breezy-jumpshot', { start: 0, end: 6 }),
+      frameRate: 8,
       repeat: 0,
+      hideOnComplete: false,
     });
 
-    // Step back (play once)
+    // Step back (play once, hold last frame — dead ball after)
     this.anims.create({
       key: 'breezy-stepback-anim',
       frames: this.anims.generateFrameNumbers('breezy-stepback', { start: 0, end: 3 }),
-      frameRate: 14,
+      frameRate: 8,
       repeat: 0,
+      hideOnComplete: false,
     });
 
     // Static dribble animation (standing with ball, better proportions)

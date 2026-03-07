@@ -129,9 +129,11 @@ export class GameSimulation {
     const offenseInput = offense.playerIndex === 0 ? p1Input : p2Input;
     const defenseInput = defense.playerIndex === 0 ? p1Input : p2Input;
 
-    const offenseInBurstMove =
-      offense.fsm.isInState(PLAYER_STATE.STEPBACK) ||
-      offense.fsm.isInState(PLAYER_STATE.CROSSOVER);
+    const isInStepback = offense.fsm.isInState(PLAYER_STATE.STEPBACK);
+    const isInCrossover = offense.fsm.isInState(PLAYER_STATE.CROSSOVER);
+    const offenseInBurstMove = isInStepback || isInCrossover;
+    // After stepback movement ends, player is in dead ball (can only shoot)
+    const stepbackDeadBall = isInStepback && offense.stateTimer >= offense.stepbackDuration;
 
     // Handle stepback
     if (offenseInput.stepbackPressed && offense.hasBall &&
@@ -147,10 +149,10 @@ export class GameSimulation {
       this.executeCrossover(offense, defense);
     }
 
-    // Handle shoot press
+    // Handle shoot press (allowed during stepback dead ball — it's the only option)
     if (offenseInput.shootPressed && offense.hasBall &&
         !offense.fsm.isInState(PLAYER_STATE.SHOOTING) &&
-        !offenseInBurstMove) {
+        (!offenseInBurstMove || stepbackDeadBall)) {
       offense.fsm.setState(PLAYER_STATE.SHOOTING);
     }
 

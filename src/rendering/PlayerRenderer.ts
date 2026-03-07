@@ -165,7 +165,8 @@ export class PlayerRenderer {
     const useJumpshot = this.hasJumpshot && isShooting;
     const useStepback = this.hasStepback && isStepback;
 
-    this.isDribbleAnimActive = useRunDribble || useIdleDribble;
+    // Hide ball during stepback (dead ball — no dribble, would be a travel)
+    this.isDribbleAnimActive = useRunDribble || useIdleDribble || useStepback;
 
     const depthBase = 10 + (p.position.y / 1000);
     g.setDepth(depthBase);
@@ -187,27 +188,30 @@ export class PlayerRenderer {
     let activeDisplayHeight = PLAYER_RADIUS * 2;
 
     if (useJumpshot && this.jumpshotSprite) {
-      // Jumpshot animation
+      // Jumpshot animation — plays once then holds last frame (follow-through)
       this.jumpshotSprite.setVisible(true);
       this.jumpshotSprite.setDepth(depthBase);
       this.jumpshotSprite.setPosition(p.position.x, p.position.y);
       this.jumpshotSprite.setFlipX(Math.cos(p.facingAngle) < 0);
       this.jumpshotSprite.setScale(ANIM_SCALE);
       this.jumpshotSprite.setAlpha(1);
-      if (!this.jumpshotSprite.anims.isPlaying || this.jumpshotSprite.anims.currentAnim?.key !== this.jumpshotKey) {
+      const jsAnim = this.jumpshotSprite.anims;
+      if (!jsAnim.isPlaying && (!jsAnim.currentAnim || jsAnim.currentAnim.key !== this.jumpshotKey)) {
         this.jumpshotSprite.play(this.jumpshotKey);
       }
+      // After anim completes, holds last frame (repeat:0, hideOnComplete:false)
       activeDisplayHeight = this.jumpshotSprite.displayHeight;
 
     } else if (useStepback && this.stepbackSprite) {
-      // Stepback animation
+      // Stepback animation — plays once, holds last frame (dead ball)
       this.stepbackSprite.setVisible(true);
       this.stepbackSprite.setDepth(depthBase);
       this.stepbackSprite.setPosition(p.position.x, p.position.y);
       this.stepbackSprite.setFlipX(Math.cos(p.facingAngle) < 0);
       this.stepbackSprite.setScale(ANIM_SCALE);
-      this.stepbackSprite.setAlpha(0.85);
-      if (!this.stepbackSprite.anims.isPlaying || this.stepbackSprite.anims.currentAnim?.key !== this.stepbackKey) {
+      this.stepbackSprite.setAlpha(1);
+      const sbAnim = this.stepbackSprite.anims;
+      if (!sbAnim.isPlaying && (!sbAnim.currentAnim || sbAnim.currentAnim.key !== this.stepbackKey)) {
         this.stepbackSprite.play(this.stepbackKey);
       }
       activeDisplayHeight = this.stepbackSprite.displayHeight;
@@ -349,13 +353,27 @@ export class PlayerRenderer {
       g.strokeCircle(p.position.x, p.position.y, PLAYER_RADIUS + 8);
     }
 
-    // Stop animations that aren't active
+    // Stop and reset animations that aren't active (so they replay fresh next time)
     if (!useRunDribble && this.runDribbleSprite?.anims.isPlaying) this.runDribbleSprite.stop();
     if (!useIdleDribble && this.idleDribbleSprite?.anims.isPlaying) this.idleDribbleSprite.stop();
     if (!useDefSlideLeft && this.defSlideLeftSprite?.anims.isPlaying) this.defSlideLeftSprite.stop();
     if (!useDefSlideRight && this.defSlideRightSprite?.anims.isPlaying) this.defSlideRightSprite.stop();
-    if (!useJumpshot && this.jumpshotSprite?.anims.isPlaying) this.jumpshotSprite.stop();
-    if (!useStepback && this.stepbackSprite?.anims.isPlaying) this.stepbackSprite.stop();
+    if (!useJumpshot && this.jumpshotSprite) {
+      if (this.jumpshotSprite.anims.isPlaying) this.jumpshotSprite.stop();
+      if (this.jumpshotSprite.anims.currentAnim?.key === this.jumpshotKey) {
+        this.jumpshotSprite.anims.restart();
+        this.jumpshotSprite.anims.stop();
+        this.jumpshotSprite.anims.currentAnim = null as any;
+      }
+    }
+    if (!useStepback && this.stepbackSprite) {
+      if (this.stepbackSprite.anims.isPlaying) this.stepbackSprite.stop();
+      if (this.stepbackSprite.anims.currentAnim?.key === this.stepbackKey) {
+        this.stepbackSprite.anims.restart();
+        this.stepbackSprite.anims.stop();
+        this.stepbackSprite.anims.currentAnim = null as any;
+      }
+    }
 
     // Name label
     this.nameText.setPosition(p.position.x, p.position.y - activeDisplayHeight * 0.5 - 8);
