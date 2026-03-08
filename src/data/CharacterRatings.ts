@@ -19,5 +19,9 @@ export interface CharacterDef {
   defensiveSlideRightAnimKey?: string;
   jumpshotAnimKey?: string;
   stepbackAnimKey?: string;
+  crossoverAnimKey?: string;
+  defenseBackpedalAnimKey?: string;
+  defenseShuffleAnimKey?: string;
+  stealAnimKey?: string;
   ratings: CharacterRatings;
 }

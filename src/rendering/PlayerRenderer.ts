@@ -4,37 +4,22 @@ import { PLAYER_RADIUS } from '../config/Constants';
 import { PLAYER_STATE } from '../simulation/PlayerStates';
 
 const SPRITE_SCALE = 0.055;
-// All animations use uniform 176x176 cells. Scale 1.13 → ~80px character display width.
+// All animations use uniform 180x180 cells. Scale 1.1 → ~200px character display.
 // Same scale, same origin for every animation — no per-anim recalibration.
-const ANIM_SCALE = 1.13;
-// Defense slides are still 480x717 from earlier reprocessing
+const ANIM_SCALE = 1.1;
+// Legacy defense slides are still 480x717 from earlier reprocessing
 const DEFENSE_SLIDE_SCALE = 0.197;
 
 export class PlayerRenderer {
   private graphics: Phaser.GameObjects.Graphics;
   private staticSprite: Phaser.GameObjects.Image | null = null;
-  private runDribbleSprite: Phaser.GameObjects.Sprite | null = null;
-  private idleDribbleSprite: Phaser.GameObjects.Sprite | null = null;
-  private defSlideLeftSprite: Phaser.GameObjects.Sprite | null = null;
-  private defSlideRightSprite: Phaser.GameObjects.Sprite | null = null;
-  private jumpshotSprite: Phaser.GameObjects.Sprite | null = null;
-  private stepbackSprite: Phaser.GameObjects.Sprite | null = null;
   private nameText: Phaser.GameObjects.Text;
   private shadow: Phaser.GameObjects.Graphics;
 
-  private hasRunDribble = false;
-  private hasIdleDribble = false;
-  private hasDefSlideLeft = false;
-  private hasDefSlideRight = false;
-  private hasJumpshot = false;
-  private hasStepback = false;
-
-  private runDribbleKey = '';
-  private idleDribbleKey = '';
-  private defSlideLeftKey = '';
-  private defSlideRightKey = '';
-  private jumpshotKey = '';
-  private stepbackKey = '';
+  // Animation sprites — all 180x180 use ANIM_SCALE and origin (0.5, 0.97)
+  private sprites: Record<string, { sprite: Phaser.GameObjects.Sprite; key: string }> = {};
+  // Legacy defense slides (480x717)
+  private legacySlides: Record<string, { sprite: Phaser.GameObjects.Sprite; key: string }> = {};
 
   // Visual juice timers
   private flashTimer = 0;
@@ -52,73 +37,51 @@ export class PlayerRenderer {
     defensiveSlideRightAnimKey?: string,
     jumpshotAnimKey?: string,
     stepbackAnimKey?: string,
+    crossoverAnimKey?: string,
+    defenseBackpedalAnimKey?: string,
+    defenseShuffleAnimKey?: string,
+    stealAnimKey?: string,
   ) {
     this.shadow = scene.add.graphics().setDepth(5);
     this.graphics = scene.add.graphics().setDepth(10);
 
-    // All 176x176 animations use ANIM_SCALE and origin (0.5, 0.97)
-    if (dribbleAnimKey && scene.anims.exists(dribbleAnimKey)) {
-      this.runDribbleKey = dribbleAnimKey;
-      this.hasRunDribble = true;
-      this.runDribbleSprite = scene.add.sprite(0, 0, dribbleAnimKey.replace('-anim', ''));
-      this.runDribbleSprite.setScale(ANIM_SCALE);
-      this.runDribbleSprite.setOrigin(0.5, 0.97);
-      this.runDribbleSprite.setDepth(10);
-      this.runDribbleSprite.setVisible(false);
-    }
+    // Helper to create 180x180 animation sprite
+    const addAnim = (id: string, animKey?: string) => {
+      if (animKey && scene.anims.exists(animKey)) {
+        const sprite = scene.add.sprite(0, 0, animKey.replace('-anim', ''));
+        sprite.setScale(ANIM_SCALE);
+        sprite.setOrigin(0.5, 0.97);
+        sprite.setDepth(10);
+        sprite.setVisible(false);
+        this.sprites[id] = { sprite, key: animKey };
+      }
+    };
 
-    if (idleDribbleAnimKey && scene.anims.exists(idleDribbleAnimKey)) {
-      this.idleDribbleKey = idleDribbleAnimKey;
-      this.hasIdleDribble = true;
-      this.idleDribbleSprite = scene.add.sprite(0, 0, idleDribbleAnimKey.replace('-anim', ''));
-      this.idleDribbleSprite.setScale(ANIM_SCALE);
-      this.idleDribbleSprite.setOrigin(0.5, 0.97);
-      this.idleDribbleSprite.setDepth(10);
-      this.idleDribbleSprite.setVisible(false);
-    }
+    addAnim('runDribble', dribbleAnimKey);
+    addAnim('idleDribble', idleDribbleAnimKey);
+    addAnim('jumpshot', jumpshotAnimKey);
+    addAnim('stepback', stepbackAnimKey);
+    addAnim('crossover', crossoverAnimKey);
+    addAnim('backpedal', defenseBackpedalAnimKey);
+    addAnim('shuffle', defenseShuffleAnimKey);
+    addAnim('steal', stealAnimKey);
 
-    // Defense slides still use 480x717 frames (separate assets)
-    if (defensiveSlideLeftAnimKey && scene.anims.exists(defensiveSlideLeftAnimKey)) {
-      this.defSlideLeftKey = defensiveSlideLeftAnimKey;
-      this.hasDefSlideLeft = true;
-      this.defSlideLeftSprite = scene.add.sprite(0, 0, defensiveSlideLeftAnimKey.replace('-anim', ''));
-      this.defSlideLeftSprite.setScale(DEFENSE_SLIDE_SCALE);
-      this.defSlideLeftSprite.setOrigin(0.5, 0.85);
-      this.defSlideLeftSprite.setDepth(10);
-      this.defSlideLeftSprite.setVisible(false);
-    }
+    // Legacy defense slides (480x717, different scale/origin)
+    const addLegacy = (id: string, animKey?: string) => {
+      if (animKey && scene.anims.exists(animKey)) {
+        const sprite = scene.add.sprite(0, 0, animKey.replace('-anim', ''));
+        sprite.setScale(DEFENSE_SLIDE_SCALE);
+        sprite.setOrigin(0.5, 0.85);
+        sprite.setDepth(10);
+        sprite.setVisible(false);
+        this.legacySlides[id] = { sprite, key: animKey };
+      }
+    };
 
-    if (defensiveSlideRightAnimKey && scene.anims.exists(defensiveSlideRightAnimKey)) {
-      this.defSlideRightKey = defensiveSlideRightAnimKey;
-      this.hasDefSlideRight = true;
-      this.defSlideRightSprite = scene.add.sprite(0, 0, defensiveSlideRightAnimKey.replace('-anim', ''));
-      this.defSlideRightSprite.setScale(DEFENSE_SLIDE_SCALE);
-      this.defSlideRightSprite.setOrigin(0.5, 0.85);
-      this.defSlideRightSprite.setDepth(10);
-      this.defSlideRightSprite.setVisible(false);
-    }
+    addLegacy('slideLeft', defensiveSlideLeftAnimKey);
+    addLegacy('slideRight', defensiveSlideRightAnimKey);
 
-    if (jumpshotAnimKey && scene.anims.exists(jumpshotAnimKey)) {
-      this.jumpshotKey = jumpshotAnimKey;
-      this.hasJumpshot = true;
-      this.jumpshotSprite = scene.add.sprite(0, 0, jumpshotAnimKey.replace('-anim', ''));
-      this.jumpshotSprite.setScale(ANIM_SCALE);
-      this.jumpshotSprite.setOrigin(0.5, 0.97);
-      this.jumpshotSprite.setDepth(10);
-      this.jumpshotSprite.setVisible(false);
-    }
-
-    if (stepbackAnimKey && scene.anims.exists(stepbackAnimKey)) {
-      this.stepbackKey = stepbackAnimKey;
-      this.hasStepback = true;
-      this.stepbackSprite = scene.add.sprite(0, 0, stepbackAnimKey.replace('-anim', ''));
-      this.stepbackSprite.setScale(ANIM_SCALE);
-      this.stepbackSprite.setOrigin(0.5, 0.97);
-      this.stepbackSprite.setDepth(10);
-      this.stepbackSprite.setVisible(false);
-    }
-
-    // Static sprite (no ball / shooting / defending)
+    // Static sprite (no ball / shooting / defending fallback)
     if (scene.textures.exists(spriteKey)) {
       this.staticSprite = scene.add.image(0, 0, spriteKey);
       this.staticSprite.setScale(SPRITE_SCALE);
@@ -157,16 +120,31 @@ export class PlayerRenderer {
       this.flashTimer = 0.12;
     }
 
-    // Decide which sprite to show
-    const useRunDribble = this.hasRunDribble && isMoving && p.hasBall && !isShooting && !isStepback && !isCrossover;
-    const useIdleDribble = this.hasIdleDribble && !isMoving && p.hasBall && !isShooting && !isStepback && !isCrossover && !isDefending;
-    const useDefSlideLeft = this.hasDefSlideLeft && isDefending && isMoving && p.velocity.x < 0;
-    const useDefSlideRight = this.hasDefSlideRight && isDefending && isMoving && p.velocity.x >= 0;
-    const useJumpshot = this.hasJumpshot && isShooting;
-    const useStepback = this.hasStepback && isStepback;
+    // Decide which animation to show (priority order)
+    let activeId = '';
 
-    // Hide ball during stepback (dead ball) and jumpshot (ball is in the animation)
-    this.isDribbleAnimActive = useRunDribble || useIdleDribble || useStepback || useJumpshot;
+    if (isShooting && this.sprites['jumpshot']) {
+      activeId = 'jumpshot';
+    } else if (isStepback && this.sprites['stepback']) {
+      activeId = 'stepback';
+    } else if (isCrossover && this.sprites['crossover']) {
+      activeId = 'crossover';
+    } else if (isStealReach && this.sprites['steal']) {
+      activeId = 'steal';
+    } else if (isDefending && isMoving && this.sprites['backpedal']) {
+      activeId = 'backpedal';
+    } else if (isDefending && !isMoving && this.sprites['shuffle']) {
+      // Static defense pose: show frame 0 of shuffle (static stance)
+      activeId = 'shuffle';
+    } else if (isMoving && p.hasBall && !isShooting && !isStepback && !isCrossover && this.sprites['runDribble']) {
+      activeId = 'runDribble';
+    } else if (!isMoving && p.hasBall && !isShooting && !isStepback && !isCrossover && !isDefending && this.sprites['idleDribble']) {
+      activeId = 'idleDribble';
+    }
+
+    // Hide ball during dribble anims, stepback (dead ball), and jumpshot
+    this.isDribbleAnimActive = activeId === 'runDribble' || activeId === 'idleDribble' ||
+      activeId === 'stepback' || activeId === 'jumpshot';
 
     const depthBase = 10 + (p.position.y / 1000);
     g.setDepth(depthBase);
@@ -178,104 +156,55 @@ export class PlayerRenderer {
 
     // Hide all sprites first
     if (this.staticSprite) this.staticSprite.setVisible(false);
-    if (this.runDribbleSprite) this.runDribbleSprite.setVisible(false);
-    if (this.idleDribbleSprite) this.idleDribbleSprite.setVisible(false);
-    if (this.defSlideLeftSprite) this.defSlideLeftSprite.setVisible(false);
-    if (this.defSlideRightSprite) this.defSlideRightSprite.setVisible(false);
-    if (this.jumpshotSprite) this.jumpshotSprite.setVisible(false);
-    if (this.stepbackSprite) this.stepbackSprite.setVisible(false);
+    for (const id in this.sprites) this.sprites[id].sprite.setVisible(false);
+    for (const id in this.legacySlides) this.legacySlides[id].sprite.setVisible(false);
 
     let activeDisplayHeight = PLAYER_RADIUS * 2;
 
-    if (useJumpshot && this.jumpshotSprite) {
-      // Jumpshot animation — plays once then holds last frame (follow-through)
-      this.jumpshotSprite.setVisible(true);
-      this.jumpshotSprite.setDepth(depthBase);
-      this.jumpshotSprite.setPosition(p.position.x, p.position.y - p.jumpHeight);
-      this.jumpshotSprite.setFlipX(Math.cos(p.facingAngle) < 0);
-      this.jumpshotSprite.setScale(ANIM_SCALE);
-      this.jumpshotSprite.setAlpha(1);
-      const jsAnim = this.jumpshotSprite.anims;
-      if (!jsAnim.isPlaying && (!jsAnim.currentAnim || jsAnim.currentAnim.key !== this.jumpshotKey)) {
-        this.jumpshotSprite.play(this.jumpshotKey);
-      }
-      // After anim completes, holds last frame (repeat:0, hideOnComplete:false)
-      activeDisplayHeight = this.jumpshotSprite.displayHeight;
+    if (activeId && this.sprites[activeId]) {
+      const { sprite, key } = this.sprites[activeId];
+      sprite.setVisible(true);
+      sprite.setDepth(depthBase);
 
-    } else if (useStepback && this.stepbackSprite) {
-      // Stepback animation — plays once, holds last frame (dead ball)
-      this.stepbackSprite.setVisible(true);
-      this.stepbackSprite.setDepth(depthBase);
-      this.stepbackSprite.setPosition(p.position.x, p.position.y);
-      this.stepbackSprite.setFlipX(Math.cos(p.facingAngle) < 0);
-      this.stepbackSprite.setScale(ANIM_SCALE);
-      this.stepbackSprite.setAlpha(1);
-      const sbAnim = this.stepbackSprite.anims;
-      if (!sbAnim.isPlaying && (!sbAnim.currentAnim || sbAnim.currentAnim.key !== this.stepbackKey)) {
-        this.stepbackSprite.play(this.stepbackKey);
-      }
-      activeDisplayHeight = this.stepbackSprite.displayHeight;
+      // Jumpshot uses jumpHeight offset
+      const yOffset = activeId === 'jumpshot' ? p.jumpHeight : 0;
+      sprite.setPosition(p.position.x, p.position.y - yOffset);
+      sprite.setFlipX(Math.cos(p.facingAngle) < 0);
+      sprite.setScale(ANIM_SCALE);
+      sprite.setAlpha(1);
 
-    } else if (useDefSlideLeft && this.defSlideLeftSprite) {
-      // Defensive slide left
-      this.defSlideLeftSprite.setVisible(true);
-      this.defSlideLeftSprite.setDepth(depthBase);
-      this.defSlideLeftSprite.setPosition(p.position.x, p.position.y);
-      this.defSlideLeftSprite.setScale(DEFENSE_SLIDE_SCALE);
-      this.defSlideLeftSprite.setAlpha(1);
-      if (!this.defSlideLeftSprite.anims.isPlaying || this.defSlideLeftSprite.anims.currentAnim?.key !== this.defSlideLeftKey) {
-        this.defSlideLeftSprite.play(this.defSlideLeftKey);
+      // Play/hold logic
+      const anim = sprite.anims;
+      if (activeId === 'jumpshot' || activeId === 'stepback' || activeId === 'crossover' || activeId === 'steal') {
+        // Play-once animations: play if not already started
+        if (!anim.isPlaying && (!anim.currentAnim || anim.currentAnim.key !== key)) {
+          sprite.play(key);
+        }
+      } else if (activeId === 'shuffle' && !isMoving) {
+        // Static defense: show frame 0 only
+        if (!anim.currentAnim || anim.currentAnim.key !== key) {
+          sprite.play(key);
+        }
+        sprite.anims.pause(sprite.anims.currentFrame ?? undefined);
+        sprite.setFrame(0);
+      } else {
+        // Looping animations
+        if (!anim.isPlaying || anim.currentAnim?.key !== key) {
+          sprite.play(key);
+        }
       }
-      activeDisplayHeight = this.defSlideLeftSprite.displayHeight;
+
       // Defense ring
-      const pulse = 0.4 + Math.sin(Date.now() * 0.006) * 0.2;
-      g.lineStyle(2, 0xffff00, pulse);
-      g.strokeCircle(p.position.x, p.position.y + 2, PLAYER_RADIUS + 4);
-
-    } else if (useDefSlideRight && this.defSlideRightSprite) {
-      // Defensive slide right
-      this.defSlideRightSprite.setVisible(true);
-      this.defSlideRightSprite.setDepth(depthBase);
-      this.defSlideRightSprite.setPosition(p.position.x, p.position.y);
-      this.defSlideRightSprite.setScale(DEFENSE_SLIDE_SCALE);
-      this.defSlideRightSprite.setAlpha(1);
-      if (!this.defSlideRightSprite.anims.isPlaying || this.defSlideRightSprite.anims.currentAnim?.key !== this.defSlideRightKey) {
-        this.defSlideRightSprite.play(this.defSlideRightKey);
+      if (isDefending) {
+        const pulse = 0.4 + Math.sin(Date.now() * 0.006) * 0.2;
+        g.lineStyle(2, 0xffff00, pulse);
+        g.strokeCircle(p.position.x, p.position.y + 2, PLAYER_RADIUS + 4);
       }
-      activeDisplayHeight = this.defSlideRightSprite.displayHeight;
-      // Defense ring
-      const pulse = 0.4 + Math.sin(Date.now() * 0.006) * 0.2;
-      g.lineStyle(2, 0xffff00, pulse);
-      g.strokeCircle(p.position.x, p.position.y + 2, PLAYER_RADIUS + 4);
 
-    } else if (useRunDribble && this.runDribbleSprite) {
-      // Running dribble animation
-      this.runDribbleSprite.setVisible(true);
-      this.runDribbleSprite.setDepth(depthBase);
-      this.runDribbleSprite.setPosition(p.position.x, p.position.y);
-      this.runDribbleSprite.setFlipX(Math.cos(p.facingAngle) < 0);
-      this.runDribbleSprite.setScale(ANIM_SCALE);
-      this.runDribbleSprite.setAlpha(1);
-      if (!this.runDribbleSprite.anims.isPlaying || this.runDribbleSprite.anims.currentAnim?.key !== this.runDribbleKey) {
-        this.runDribbleSprite.play(this.runDribbleKey);
-      }
-      activeDisplayHeight = this.runDribbleSprite.displayHeight;
-
-    } else if (useIdleDribble && this.idleDribbleSprite) {
-      // Idle dribble animation (standing with ball)
-      this.idleDribbleSprite.setVisible(true);
-      this.idleDribbleSprite.setDepth(depthBase);
-      this.idleDribbleSprite.setPosition(p.position.x, p.position.y);
-      this.idleDribbleSprite.setFlipX(Math.cos(p.facingAngle) < 0);
-      this.idleDribbleSprite.setScale(ANIM_SCALE);
-      this.idleDribbleSprite.setAlpha(1);
-      if (!this.idleDribbleSprite.anims.isPlaying || this.idleDribbleSprite.anims.currentAnim?.key !== this.idleDribbleKey) {
-        this.idleDribbleSprite.play(this.idleDribbleKey);
-      }
-      activeDisplayHeight = this.idleDribbleSprite.displayHeight;
+      activeDisplayHeight = sprite.displayHeight;
 
     } else if (this.staticSprite) {
-      // Static sprite (no ball, defending, shooting, etc.)
+      // Static sprite fallback (no ball, defending, shooting, etc.)
       this.staticSprite.setVisible(true);
       this.staticSprite.setDepth(depthBase);
       this.staticSprite.setPosition(p.position.x, p.position.y);
@@ -286,7 +215,6 @@ export class PlayerRenderer {
 
       if (isDefending) {
         scale = SPRITE_SCALE * 0.95;
-        // Pulsing defense circle
         const pulse = 0.4 + Math.sin(Date.now() * 0.006) * 0.2;
         g.lineStyle(2, 0xffff00, pulse);
         g.strokeCircle(p.position.x, p.position.y + 2, PLAYER_RADIUS + 4);
@@ -295,14 +223,11 @@ export class PlayerRenderer {
         scale = SPRITE_SCALE * 1.05;
         tint = 0xffffcc;
       }
-
       if (isCrossover) {
         tint = 0xccffcc;
         scale = SPRITE_SCALE * 0.97;
       }
-
       if (isStealReach) {
-        // Red tint during reach-in freeze
         tint = 0xff6666;
         scale = SPRITE_SCALE * 0.93;
       }
@@ -312,7 +237,6 @@ export class PlayerRenderer {
       this.staticSprite.setTint(tint);
       activeDisplayHeight = this.staticSprite.displayHeight;
 
-      // Ball possession glow when no dribble anim (pulsing)
       if (p.hasBall) {
         const glowPulse = 0.4 + Math.sin(Date.now() * 0.005) * 0.2;
         g.lineStyle(2, 0xff6600, glowPulse);
@@ -338,7 +262,7 @@ export class PlayerRenderer {
       }
     }
 
-    // Burst move flash ring (stepback/crossover activation)
+    // Burst move flash ring
     if (this.flashTimer > 0) {
       const flashAlpha = this.flashTimer / 0.12;
       const flashRadius = PLAYER_RADIUS + 10 + (1 - flashAlpha) * 15;
@@ -353,25 +277,23 @@ export class PlayerRenderer {
       g.strokeCircle(p.position.x, p.position.y, PLAYER_RADIUS + 8);
     }
 
-    // Stop and reset animations that aren't active (so they replay fresh next time)
-    if (!useRunDribble && this.runDribbleSprite?.anims.isPlaying) this.runDribbleSprite.stop();
-    if (!useIdleDribble && this.idleDribbleSprite?.anims.isPlaying) this.idleDribbleSprite.stop();
-    if (!useDefSlideLeft && this.defSlideLeftSprite?.anims.isPlaying) this.defSlideLeftSprite.stop();
-    if (!useDefSlideRight && this.defSlideRightSprite?.anims.isPlaying) this.defSlideRightSprite.stop();
-    if (!useJumpshot && this.jumpshotSprite) {
-      if (this.jumpshotSprite.anims.isPlaying) this.jumpshotSprite.stop();
-      if (this.jumpshotSprite.anims.currentAnim?.key === this.jumpshotKey) {
-        this.jumpshotSprite.anims.restart();
-        this.jumpshotSprite.anims.stop();
-        this.jumpshotSprite.anims.currentAnim = null as any;
+    // Stop and reset play-once animations that aren't active
+    for (const id of ['jumpshot', 'stepback', 'crossover', 'steal']) {
+      if (id !== activeId && this.sprites[id]) {
+        const { sprite, key } = this.sprites[id];
+        if (sprite.anims.isPlaying) sprite.stop();
+        if (sprite.anims.currentAnim?.key === key) {
+          sprite.anims.restart();
+          sprite.anims.stop();
+          sprite.anims.currentAnim = null as any;
+        }
       }
     }
-    if (!useStepback && this.stepbackSprite) {
-      if (this.stepbackSprite.anims.isPlaying) this.stepbackSprite.stop();
-      if (this.stepbackSprite.anims.currentAnim?.key === this.stepbackKey) {
-        this.stepbackSprite.anims.restart();
-        this.stepbackSprite.anims.stop();
-        this.stepbackSprite.anims.currentAnim = null as any;
+    // Stop looping animations that aren't active
+    for (const id of ['runDribble', 'idleDribble', 'backpedal', 'shuffle']) {
+      if (id !== activeId && this.sprites[id]) {
+        const { sprite } = this.sprites[id];
+        if (sprite.anims.isPlaying) sprite.stop();
       }
     }
 
@@ -383,12 +305,8 @@ export class PlayerRenderer {
     this.graphics.destroy();
     this.shadow.destroy();
     this.staticSprite?.destroy();
-    this.runDribbleSprite?.destroy();
-    this.idleDribbleSprite?.destroy();
-    this.defSlideLeftSprite?.destroy();
-    this.defSlideRightSprite?.destroy();
-    this.jumpshotSprite?.destroy();
-    this.stepbackSprite?.destroy();
+    for (const id in this.sprites) this.sprites[id].sprite.destroy();
+    for (const id in this.legacySlides) this.legacySlides[id].sprite.destroy();
     this.nameText.destroy();
   }
 }

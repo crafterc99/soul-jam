@@ -41,38 +41,43 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('playerselect-bg', 'assets/images/playerselect.jpg');
     this.load.image('char-99', 'assets/images/99full.png');
     this.load.image('char-breezy', 'assets/images/breezyfull.png');
-    this.load.image('basketball', 'assets/images/basketball.png');  // pre-cropped 124x124
+    this.load.image('basketball', 'assets/images/basketball.png');
 
     // Player select backgrounds
     this.load.image('select-99', 'assets/images/99-player-select.webp');
     this.load.image('select-breezy', 'assets/images/breezy-player-select.webp');
 
-    // All Breezy animations use uniform 176x176 frame cells (4 cols x 2 rows grids)
-    this.load.spritesheet('breezy-dribble', 'assets/images/breezy-dribble.png', {
-      frameWidth: 176, frameHeight: 176,
-    });
-    this.load.spritesheet('breezy-idle-dribble', 'assets/images/breezy-idle-dribble.png', {
-      frameWidth: 320, frameHeight: 1434,
-    });
+    // All Breezy animations use uniform 180x180 frame cells
+    const F = { frameWidth: 180, frameHeight: 180 };
+
+    this.load.spritesheet('breezy-static-dribble', 'assets/images/breezy-static-dribble.png', F);
+    this.load.spritesheet('breezy-dribble', 'assets/images/breezy-dribble.png', F);
+    this.load.spritesheet('breezy-jumpshot', 'assets/images/breezy-jumpshot.png', F);
+    this.load.spritesheet('breezy-stepback', 'assets/images/breezy-stepback.png', F);
+    this.load.spritesheet('breezy-crossover', 'assets/images/breezy-crossover.png', F);
+    this.load.spritesheet('breezy-defense-backpedal', 'assets/images/breezy-defense-backpedal.png', F);
+    this.load.spritesheet('breezy-defense-shuffle', 'assets/images/breezy-defense-shuffle.png', F);
+    this.load.spritesheet('breezy-steal', 'assets/images/breezy-steal.png', F);
+
+    // Legacy defense slides (kept for now, can be removed later)
     this.load.spritesheet('breezy-defensive-slide-left', 'assets/images/breezy-defensive-slide-left.png', {
       frameWidth: 480, frameHeight: 717,
     });
     this.load.spritesheet('breezy-defensive-slide-right', 'assets/images/breezy-defensive-slide-right.png', {
       frameWidth: 480, frameHeight: 717,
     });
-    this.load.spritesheet('breezy-jumpshot', 'assets/images/breezy-jumpshot.png', {
-      frameWidth: 176, frameHeight: 176,
-    });
-    this.load.spritesheet('breezy-stepback', 'assets/images/breezy-stepback.png', {
-      frameWidth: 176, frameHeight: 176,
-    });
-    this.load.spritesheet('breezy-static-dribble', 'assets/images/breezy-static-dribble.png', {
-      frameWidth: 176, frameHeight: 176,
-    });
   }
 
   create(): void {
-    // Running dribble animation (fast, for movement)
+    // Static dribble (idle with ball) — loop
+    this.anims.create({
+      key: 'breezy-static-dribble-anim',
+      frames: this.anims.generateFrameNumbers('breezy-static-dribble', { start: 0, end: 5 }),
+      frameRate: 8,
+      repeat: -1,
+    });
+
+    // Running dribble — loop
     this.anims.create({
       key: 'breezy-dribble-anim',
       frames: this.anims.generateFrameNumbers('breezy-dribble', { start: 0, end: 7 }),
@@ -80,31 +85,7 @@ export class PreloadScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    // Idle dribble animation (slower, for standing with ball)
-    this.anims.create({
-      key: 'breezy-idle-dribble-anim',
-      frames: this.anims.generateFrameNumbers('breezy-idle-dribble', { start: 0, end: 5 }),
-      frameRate: 5,
-      repeat: -1,
-    });
-
-    // Defensive slide left
-    this.anims.create({
-      key: 'breezy-defensive-slide-left-anim',
-      frames: this.anims.generateFrameNumbers('breezy-defensive-slide-left', { start: 0, end: 5 }),
-      frameRate: 10,
-      repeat: -1,
-    });
-
-    // Defensive slide right
-    this.anims.create({
-      key: 'breezy-defensive-slide-right-anim',
-      frames: this.anims.generateFrameNumbers('breezy-defensive-slide-right', { start: 0, end: 5 }),
-      frameRate: 10,
-      repeat: -1,
-    });
-
-    // Jumpshot (play once, hold last frame)
+    // Jumpshot — play once, hold last frame
     this.anims.create({
       key: 'breezy-jumpshot-anim',
       frames: this.anims.generateFrameNumbers('breezy-jumpshot', { start: 0, end: 6 }),
@@ -113,7 +94,7 @@ export class PreloadScene extends Phaser.Scene {
       hideOnComplete: false,
     });
 
-    // Step back (play once, hold last frame — dead ball after)
+    // Step back — play once, hold last frame (dead ball)
     this.anims.create({
       key: 'breezy-stepback-anim',
       frames: this.anims.generateFrameNumbers('breezy-stepback', { start: 0, end: 3 }),
@@ -122,11 +103,51 @@ export class PreloadScene extends Phaser.Scene {
       hideOnComplete: false,
     });
 
-    // Static dribble animation (standing with ball, better proportions)
+    // Crossover — play once, hold last frame
     this.anims.create({
-      key: 'breezy-static-dribble-anim',
-      frames: this.anims.generateFrameNumbers('breezy-static-dribble', { start: 0, end: 5 }),
+      key: 'breezy-crossover-anim',
+      frames: this.anims.generateFrameNumbers('breezy-crossover', { start: 0, end: 3 }),
       frameRate: 8,
+      repeat: 0,
+      hideOnComplete: false,
+    });
+
+    // Defense back pedal — loop
+    this.anims.create({
+      key: 'breezy-defense-backpedal-anim',
+      frames: this.anims.generateFrameNumbers('breezy-defense-backpedal', { start: 0, end: 3 }),
+      frameRate: 8,
+      repeat: -1,
+    });
+
+    // Defense shuffle — frame 0 = static stance, loop both frames when moving
+    this.anims.create({
+      key: 'breezy-defense-shuffle-anim',
+      frames: this.anims.generateFrameNumbers('breezy-defense-shuffle', { start: 0, end: 1 }),
+      frameRate: 6,
+      repeat: -1,
+    });
+
+    // Steal reach-in — play once, hold last frame
+    this.anims.create({
+      key: 'breezy-steal-anim',
+      frames: this.anims.generateFrameNumbers('breezy-steal', { start: 0, end: 2 }),
+      frameRate: 8,
+      repeat: 0,
+      hideOnComplete: false,
+    });
+
+    // Legacy defense slides
+    this.anims.create({
+      key: 'breezy-defensive-slide-left-anim',
+      frames: this.anims.generateFrameNumbers('breezy-defensive-slide-left', { start: 0, end: 5 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: 'breezy-defensive-slide-right-anim',
+      frames: this.anims.generateFrameNumbers('breezy-defensive-slide-right', { start: 0, end: 5 }),
+      frameRate: 10,
       repeat: -1,
     });
 

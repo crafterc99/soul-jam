@@ -28,6 +28,10 @@ export const CHARACTERS: Record<string, CharacterDef> = {
     defensiveSlideRightAnimKey: 'breezy-defensive-slide-right-anim',
     jumpshotAnimKey: 'breezy-jumpshot-anim',
     stepbackAnimKey: 'breezy-stepback-anim',
+    crossoverAnimKey: 'breezy-crossover-anim',
+    defenseBackpedalAnimKey: 'breezy-defense-backpedal-anim',
+    defenseShuffleAnimKey: 'breezy-defense-shuffle-anim',
+    stealAnimKey: 'breezy-steal-anim',
     ratings: {
       speed: 75,
       power: 82,
