@@ -115,6 +115,10 @@ export class GameSimulation {
 
     offense.update(dt);
     defense.update(dt);
+
+    // Defender always faces offense
+    const toOffense = offense.position.subtract(defense.position);
+    defense.facingAngle = Math.atan2(toOffense.y, toOffense.x);
   }
 
   private tickInbound(dt: number): void {
@@ -122,6 +126,10 @@ export class GameSimulation {
     const defense = this.defensePlayer;
     offense.update(dt);
     defense.update(dt);
+
+    // Defender always faces offense
+    const toOffense = offense.position.subtract(defense.position);
+    defense.facingAngle = Math.atan2(toOffense.y, toOffense.x);
   }
 
   private tickLive(dt: number, p1Input: IPlayerInput, p2Input: IPlayerInput): void {

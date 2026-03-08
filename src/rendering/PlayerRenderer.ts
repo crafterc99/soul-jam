@@ -132,11 +132,21 @@ export class PlayerRenderer {
     const isStepback = p.fsm.isInState(PLAYER_STATE.STEPBACK);
     const isCrossover = p.fsm.isInState(PLAYER_STATE.CROSSOVER);
     const isStealReach = p.fsm.isInState(PLAYER_STATE.STEAL_REACH);
-    const isMoving = p.velocity.length() > 10;
+    const speed = p.velocity.length();
+    const isMoving = speed > 10;
 
     // Trigger flash on burst move start
     if ((isStepback || isCrossover) && p.stateTimer < 0.03) {
       this.flashTimer = 0.12;
+    }
+
+    // For defense: determine if moving backward (away from facing) or forward/lateral
+    let isMovingBackward = false;
+    if (isDefending && isMoving) {
+      const faceDirX = Math.cos(p.facingAngle);
+      const faceDirY = Math.sin(p.facingAngle);
+      const dot = (p.velocity.x * faceDirX + p.velocity.y * faceDirY) / speed;
+      isMovingBackward = dot < -0.3; // moving away from who they're facing
     }
 
     // Decide which animation to show (priority order)
@@ -150,11 +160,18 @@ export class PlayerRenderer {
       activeId = 'crossover';
     } else if (isStealReach && this.sprites['steal']) {
       activeId = 'steal';
-    } else if (isDefending && isMoving && this.sprites['backpedal']) {
+    } else if (isDefending && isMoving && isMovingBackward && this.sprites['backpedal']) {
+      // Moving backward (retreating from offense) → backpedal animation
       activeId = 'backpedal';
-    } else if (isDefending && !isMoving && this.sprites['shuffle']) {
-      // Static defense pose: show frame 0 of shuffle (static stance)
+    } else if (isDefending && isMoving && this.sprites['shuffle']) {
+      // Moving forward or laterally in defense → shuffle animation (looping)
       activeId = 'shuffle';
+    } else if (isDefending && !isMoving && this.sprites['shuffle']) {
+      // Standing still in defense → shuffle frame 0 (static stance)
+      activeId = 'shuffle';
+    } else if (isDefending && isMoving && !this.sprites['shuffle'] && this.sprites['backpedal']) {
+      // Fallback: use backpedal for any defense movement if shuffle missing
+      activeId = 'backpedal';
     } else if (isMoving && p.hasBall && !isShooting && !isStepback && !isCrossover && this.sprites['runDribble']) {
       activeId = 'runDribble';
     } else if (!isMoving && p.hasBall && !isShooting && !isStepback && !isCrossover && !isDefending && this.sprites['idleDribble']) {
@@ -200,14 +217,19 @@ export class PlayerRenderer {
           sprite.play(key);
         }
       } else if (activeId === 'shuffle' && !isMoving) {
-        // Static defense: show frame 0 only
+        // Static defense stance: show frame 0 only (first frame of shuffle = idle defense)
         if (!anim.currentAnim || anim.currentAnim.key !== key) {
           sprite.play(key);
         }
         sprite.anims.pause(sprite.anims.currentFrame ?? undefined);
         sprite.setFrame(0);
+      } else if (activeId === 'shuffle' && isMoving) {
+        // Moving forward/laterally in defense: loop shuffle
+        if (!anim.isPlaying || anim.currentAnim?.key !== key) {
+          sprite.play(key);
+        }
       } else {
-        // Looping animations
+        // Other looping animations (runDribble, idleDribble, backpedal)
         if (!anim.isPlaying || anim.currentAnim?.key !== key) {
           sprite.play(key);
         }
