@@ -7,10 +7,17 @@ const FLICK_CENTER_ZONE = 0.3;  // stick must be inside this to reset flick
 const FLICK_TIME_WINDOW = 200;  // ms — max time from center to threshold
 const FLICK_COOLDOWN = 300;     // ms — prevent repeat flicks
 
+// PS4/PS5 layout: Cross=A(0), Circle=B(1), Square=X(2), Triangle=Y(3)
+// Xbox layout:    A=A(0),     B=B(1),      X=X(2),      Y=Y(3)
+
 export class GamepadInputProvider extends InputProvider {
   private pad: Phaser.Input.Gamepad.Gamepad | null = null;
   private padIndex: number;
-  private shootWasDown = false;
+
+  // Shoot tracking for Cross (A) button
+  private shootWasDown_A = false;
+  // Shoot tracking for Square (X) button — also used for steal contextually
+  private shootWasDown_X = false;
 
   // Flick detection state
   private wasNearCenter = true;
@@ -68,21 +75,34 @@ export class GamepadInputProvider extends InputProvider {
       }
     }
 
-    // A button = shoot (button index 0)
-    const shootDown = this.pad.A;
-    input.shootPressed = shootDown && !this.shootWasDown;
-    input.shootHeld = shootDown;
-    input.shootReleased = !shootDown && this.shootWasDown;
-    this.shootWasDown = shootDown;
+    // Cross / A button (button 0) = shoot
+    const shootDown_A = this.pad.A;
+    const aPressed = shootDown_A && !this.shootWasDown_A;
+    const aHeld = shootDown_A;
+    const aReleased = !shootDown_A && this.shootWasDown_A;
+    this.shootWasDown_A = shootDown_A;
 
-    // B button = crossover (fallback)
+    // Square / X button (button 2) = shoot on offense, steal on defense
+    // Game sim routes by role, so we map to both shoot AND steal
+    const shootDown_X = this.pad.X;
+    const xPressed = shootDown_X && !this.shootWasDown_X;
+    const xHeld = shootDown_X;
+    const xReleased = !shootDown_X && this.shootWasDown_X;
+    this.shootWasDown_X = shootDown_X;
+
+    // Merge both buttons into shoot (either one works on offense)
+    input.shootPressed = aPressed || xPressed;
+    input.shootHeld = aHeld || xHeld;
+    input.shootReleased = aReleased || xReleased;
+
+    // Square also maps to steal (used on defense)
+    input.stealPressed = this.pad.X;
+
+    // Circle / B button (button 1) = crossover
     input.crossoverPressed = input.crossoverPressed || this.pad.B;
 
-    // X button = stepback (fallback)
-    input.stepbackPressed = input.stepbackPressed || this.pad.X;
-
-    // Y button = steal (button index 3)
-    input.stealPressed = this.pad.Y;
+    // Triangle / Y button (button 3) = steal (fallback)
+    input.stealPressed = input.stealPressed || this.pad.Y;
 
     // Left trigger/bumper = defense stance
     input.defenseStance = !!(this.pad.L1 || this.pad.L2 > 0.5);
