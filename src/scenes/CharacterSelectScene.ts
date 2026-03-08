@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SCENE_CHARACTER_SELECT, SCENE_GAME, SCENE_MENU, GAME_WIDTH, GAME_HEIGHT } from '../config/Constants';
+import { SCENE_CHARACTER_SELECT, SCENE_GAME, SCENE_BOOT, GAME_WIDTH, GAME_HEIGHT } from '../config/Constants';
 import { CHARACTERS } from '../data/Characters';
 
 interface SceneData {
@@ -25,8 +25,10 @@ export class CharacterSelectScene extends Phaser.Scene {
 
   init(data: SceneData): void {
     this.mode = data.mode;
-    this.p1Selection = 0;
-    this.p2Selection = Math.min(1, this.characterIds.length - 1);
+    // Default to Breezy (index 1) since she has all the animations
+    const breezyIdx = this.characterIds.indexOf('breezy');
+    this.p1Selection = breezyIdx >= 0 ? breezyIdx : 0;
+    this.p2Selection = (this.p1Selection + 1) % this.characterIds.length;
   }
 
   create(): void {
@@ -69,7 +71,7 @@ export class CharacterSelectScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-RIGHT', () => this.navigate(1));
     this.input.keyboard?.on('keydown-SPACE', () => this.confirm());
     this.input.keyboard?.on('keydown-ENTER', () => this.confirm());
-    this.input.keyboard?.on('keydown-ESC', () => this.scene.start(SCENE_MENU));
+    this.input.keyboard?.on('keydown-ESC', () => this.scene.start(SCENE_BOOT));
   }
 
   private updateBackground(): void {

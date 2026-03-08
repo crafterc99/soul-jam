@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SCENE_PRELOAD, SCENE_MENU, GAME_WIDTH, GAME_HEIGHT } from '../config/Constants';
+import { SCENE_PRELOAD, SCENE_CHARACTER_SELECT, GAME_WIDTH, GAME_HEIGHT } from '../config/Constants';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -103,11 +103,11 @@ export class PreloadScene extends Phaser.Scene {
       hideOnComplete: false,
     });
 
-    // Crossover — play once, hold last frame
+    // Crossover — play once, hold last frame, slower
     this.anims.create({
       key: 'breezy-crossover-anim',
       frames: this.anims.generateFrameNumbers('breezy-crossover', { start: 0, end: 3 }),
-      frameRate: 8,
+      frameRate: 6,
       repeat: 0,
       hideOnComplete: false,
     });
@@ -151,6 +151,6 @@ export class PreloadScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    this.scene.start(SCENE_MENU);
+    this.scene.start(SCENE_CHARACTER_SELECT, { mode: 'cpu' });
   }
 }

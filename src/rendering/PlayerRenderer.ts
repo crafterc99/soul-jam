@@ -142,9 +142,9 @@ export class PlayerRenderer {
       activeId = 'idleDribble';
     }
 
-    // Hide ball during dribble anims, stepback (dead ball), and jumpshot
+    // Hide ball during dribble anims, stepback (dead ball), jumpshot, and crossover
     this.isDribbleAnimActive = activeId === 'runDribble' || activeId === 'idleDribble' ||
-      activeId === 'stepback' || activeId === 'jumpshot';
+      activeId === 'stepback' || activeId === 'jumpshot' || activeId === 'crossover';
 
     const depthBase = 10 + (p.position.y / 1000);
     g.setDepth(depthBase);

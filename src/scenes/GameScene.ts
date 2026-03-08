@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SCENE_GAME, SCENE_PAUSE, SCENE_MENU, GAME_WIDTH, GAME_HEIGHT } from '../config/Constants';
+import { SCENE_GAME, SCENE_PAUSE, SCENE_BOOT, GAME_WIDTH, GAME_HEIGHT } from '../config/Constants';
 import { InputManager } from '../input/InputManager';
 import { KeyboardInputProvider, WASD_BINDINGS, ARROW_BINDINGS } from '../input/KeyboardInputProvider';
 import { NullInputProvider } from '../input/NullInputProvider';
@@ -166,10 +166,10 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(201);
 
     this.input.keyboard?.once('keydown-SPACE', () => {
-      this.scene.start(SCENE_MENU);
+      this.scene.start(SCENE_BOOT);
     });
     this.input.keyboard?.once('keydown-ENTER', () => {
-      this.scene.start(SCENE_MENU);
+      this.scene.start(SCENE_BOOT);
     });
   }
 }
