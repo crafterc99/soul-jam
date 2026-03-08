@@ -31,10 +31,11 @@ export class MenuScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    // Any key/click starts
+    // Any key/click/gamepad starts
     this.input.keyboard?.on('keydown-SPACE', () => this.startGame());
     this.input.keyboard?.on('keydown-ENTER', () => this.startGame());
     this.input.on('pointerdown', () => this.startGame());
+    this.input.gamepad?.on('down', () => this.startGame());
   }
 
   private startGame(): void {

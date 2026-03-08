@@ -18,6 +18,7 @@ export class CharacterSelectScene extends Phaser.Scene {
   private p2Selection = 1;
   private characterIds = Object.keys(CHARACTERS);
   private bgImage: Phaser.GameObjects.Image | null = null;
+  private gamepadNavTimer = 0;
 
   constructor() {
     super({ key: SCENE_CHARACTER_SELECT });
@@ -56,7 +57,7 @@ export class CharacterSelectScene extends Phaser.Scene {
     });
 
     // Controls hint
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 12, 'A/D: Select | SPACE: Start | ESC: Back', {
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 12, 'A/D or Stick: Select | SPACE or A Button: Start | ESC or B: Back', {
       fontSize: '11px',
       fontFamily: 'monospace',
       color: '#666666',
@@ -64,7 +65,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       strokeThickness: 2,
     }).setOrigin(0.5);
 
-    // Controls
+    // Keyboard controls
     this.input.keyboard?.on('keydown-A', () => this.navigate(-1));
     this.input.keyboard?.on('keydown-D', () => this.navigate(1));
     this.input.keyboard?.on('keydown-LEFT', () => this.navigate(-1));
@@ -72,6 +73,17 @@ export class CharacterSelectScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-SPACE', () => this.confirm());
     this.input.keyboard?.on('keydown-ENTER', () => this.confirm());
     this.input.keyboard?.on('keydown-ESC', () => this.scene.start(SCENE_BOOT));
+
+    // Gamepad controls
+    this.input.gamepad?.on('down', (_pad: Phaser.Input.Gamepad.Gamepad, button: Phaser.Input.Gamepad.Button) => {
+      if (button.index === 0) this.confirm();           // A = confirm
+      if (button.index === 1) this.scene.start(SCENE_BOOT); // B = back
+      if (button.index === 14) this.navigate(-1);       // D-pad left
+      if (button.index === 15) this.navigate(1);        // D-pad right
+    });
+
+    // Gamepad stick navigation (with debounce)
+    this.gamepadNavTimer = 0;
   }
 
   private updateBackground(): void {
@@ -80,6 +92,20 @@ export class CharacterSelectScene extends Phaser.Scene {
     if (bgKey && this.textures.exists(bgKey) && this.bgImage) {
       this.bgImage.setTexture(bgKey);
       this.bgImage.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+    }
+  }
+
+  update(_time: number, delta: number): void {
+    // Gamepad stick navigation with debounce
+    if (this.gamepadNavTimer > 0) {
+      this.gamepadNavTimer -= delta;
+      return;
+    }
+    const pad = this.input.gamepad?.getPad(0);
+    if (pad && pad.connected) {
+      const lx = pad.leftStick.x;
+      if (lx < -0.5) { this.navigate(-1); this.gamepadNavTimer = 250; }
+      else if (lx > 0.5) { this.navigate(1); this.gamepadNavTimer = 250; }
     }
   }
 

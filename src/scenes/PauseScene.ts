@@ -57,6 +57,21 @@ export class PauseScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ENTER', () => this.selectOption(this.selectedIndex));
     this.input.keyboard?.on('keydown-SPACE', () => this.selectOption(this.selectedIndex));
     this.input.keyboard?.on('keydown-ESC', () => this.selectOption(0)); // Resume
+
+    // Gamepad controls
+    this.input.gamepad?.on('down', (_pad: Phaser.Input.Gamepad.Gamepad, button: Phaser.Input.Gamepad.Button) => {
+      if (button.index === 0) this.selectOption(this.selectedIndex); // A = confirm
+      if (button.index === 1) this.selectOption(0);                  // B = resume
+      if (button.index === 9) this.selectOption(0);                  // Start = resume
+      if (button.index === 12) {                                     // D-pad up
+        this.selectedIndex = (this.selectedIndex - 1 + this.options.length) % this.options.length;
+        this.updateSelection();
+      }
+      if (button.index === 13) {                                     // D-pad down
+        this.selectedIndex = (this.selectedIndex + 1) % this.options.length;
+        this.updateSelection();
+      }
+    });
   }
 
   private updateSelection(): void {

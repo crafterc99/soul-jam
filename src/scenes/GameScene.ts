@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { SCENE_GAME, SCENE_PAUSE, SCENE_BOOT, GAME_WIDTH, GAME_HEIGHT } from '../config/Constants';
 import { InputManager } from '../input/InputManager';
 import { KeyboardInputProvider, WASD_BINDINGS, ARROW_BINDINGS } from '../input/KeyboardInputProvider';
+import { GamepadInputProvider } from '../input/GamepadInputProvider';
+import { CompositeInputProvider } from '../input/CompositeInputProvider';
 import { NullInputProvider } from '../input/NullInputProvider';
 import { GameSimulation } from '../simulation/GameSimulation';
 import { GamePhase } from '../simulation/GameState';
@@ -48,12 +50,18 @@ export class GameScene extends Phaser.Scene {
     // Setup simulation
     this.sim = new GameSimulation(p1Char, p2Char);
 
-    // Setup input
+    // Setup input — keyboard + gamepad both work simultaneously
     this.inputManager = new InputManager();
-    this.inputManager.setProvider(0, new KeyboardInputProvider(WASD_BINDINGS));
+    this.inputManager.setProvider(0, new CompositeInputProvider(
+      new KeyboardInputProvider(WASD_BINDINGS),
+      new GamepadInputProvider(0),
+    ));
 
     if (this.sceneData.mode === 'local2p') {
-      this.inputManager.setProvider(1, new KeyboardInputProvider(ARROW_BINDINGS));
+      this.inputManager.setProvider(1, new CompositeInputProvider(
+        new KeyboardInputProvider(ARROW_BINDINGS),
+        new GamepadInputProvider(1),
+      ));
     } else {
       this.inputManager.setProvider(1, new NullInputProvider());
       this.aiController = new AIController(1, 'medium');
@@ -160,7 +168,7 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(201);
 
     const continueText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 80,
-      'Press SPACE to return to menu', {
+      'Press SPACE or A to return to menu', {
       fontSize: '20px',
       color: '#aaaaaa',
     }).setOrigin(0.5).setDepth(201);
@@ -171,5 +179,12 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard?.once('keydown-ENTER', () => {
       this.scene.start(SCENE_BOOT);
     });
+
+    // Gamepad A button to return to menu
+    if (this.input.gamepad) {
+      this.input.gamepad.once('down', () => {
+        this.scene.start(SCENE_BOOT);
+      });
+    }
   }
 }
