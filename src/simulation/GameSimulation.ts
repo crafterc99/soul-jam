@@ -184,10 +184,25 @@ export class GameSimulation {
     offense.update(dt);
     defense.update(dt);
 
-    // Ball handler faces towards hoop when not actively running
-    if (offense.hasBall && !offense.fsm.isInState(PLAYER_STATE.RUN)) {
+    // Ball handler facing direction
+    if (offense.hasBall && !offense.fsm.isInState(PLAYER_STATE.SHOOTING) && !offenseInBurstMove) {
       const toHoopDir = this.court.hoopPosition.subtract(offense.position);
-      offense.facingAngle = Math.atan2(toHoopDir.y, toHoopDir.x);
+      if (offense.fsm.isInState(PLAYER_STATE.RUN)) {
+        // When running: face away from hoop if defender is between you and the basket
+        const offDistToHoop = offense.position.distanceTo(this.court.hoopPosition);
+        const defDistToHoop = defense.position.distanceTo(this.court.hoopPosition);
+        if (defDistToHoop < offDistToHoop + 40) {
+          // Defender in front or on side — face away from hoop (protect the ball)
+          const awayFromHoop = offense.position.subtract(this.court.hoopPosition);
+          offense.facingAngle = Math.atan2(awayFromHoop.y, awayFromHoop.x);
+        } else {
+          // Defender beaten — face toward hoop
+          offense.facingAngle = Math.atan2(toHoopDir.y, toHoopDir.x);
+        }
+      } else {
+        // Not running — face hoop
+        offense.facingAngle = Math.atan2(toHoopDir.y, toHoopDir.x);
+      }
     }
 
     // Defender faces the offense player

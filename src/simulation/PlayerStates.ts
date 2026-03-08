@@ -149,15 +149,11 @@ export class CrossoverState implements State<PlayerSim> {
       return;
     }
 
-    // Movement burst only during first 0.3s (gameplay feel), then animation continues
-    const MOVEMENT_PHASE = 0.3;
-    if (player.stateTimer < MOVEMENT_PHASE) {
-      const progress = player.stateTimer / MOVEMENT_PHASE;
-      const speedCurve = 1 - progress;
-      const crossVel = player.crossoverVelocity.scale(speedCurve);
-      player.position = player.position.add(crossVel.scale(dt));
-    }
-    // After 0.3s: player is stationary but animation continues playing
+    // During crossover, apply lateral burst (same deceleration curve as stepback)
+    const progress = player.stateTimer / player.crossoverDuration;
+    const speedCurve = 1 - progress;
+    const crossVel = player.crossoverVelocity.scale(speedCurve);
+    player.position = player.position.add(crossVel.scale(dt));
   }
 }
 

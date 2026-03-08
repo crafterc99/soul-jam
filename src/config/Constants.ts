@@ -55,7 +55,7 @@ export const TIMING_EARLY_PENALTY = -0.08;
 export const STEPBACK_DURATION = 0.35;
 export const STEPBACK_DISTANCE = 50;
 export const STEPBACK_DEFENDER_FREEZE = 1.0;
-export const CROSSOVER_DURATION = 1.33;
+export const CROSSOVER_DURATION = 0.3;
 export const CROSSOVER_SHIFT_DISTANCE = 40;
 export const CROSSOVER_DEFENDER_SHIFT = 35;
 
