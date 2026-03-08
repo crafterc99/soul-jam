@@ -47,14 +47,33 @@ export class PlayerRenderer {
 
     // Helper to create 180x180 animation sprite
     const addAnim = (id: string, animKey?: string) => {
-      if (animKey && scene.anims.exists(animKey)) {
-        const sprite = scene.add.sprite(0, 0, animKey.replace('-anim', ''));
-        sprite.setScale(ANIM_SCALE);
-        sprite.setOrigin(0.5, 0.97);
-        sprite.setDepth(10);
-        sprite.setVisible(false);
-        this.sprites[id] = { sprite, key: animKey };
+      if (!animKey) return;
+      const textureKey = animKey.replace('-anim', '');
+      if (!scene.textures.exists(textureKey)) {
+        console.warn(`[PlayerRenderer] Texture '${textureKey}' not found for ${id}`);
+        return;
       }
+      if (!scene.anims.exists(animKey)) {
+        console.warn(`[PlayerRenderer] Animation '${animKey}' not found for ${id}, creating from texture`);
+        // Try to create the animation on-the-fly from the texture
+        const frameCount = scene.textures.get(textureKey).getFrameNames().length ||
+          Object.keys(scene.textures.get(textureKey).frames).length - 1; // -1 for __BASE
+        if (frameCount > 0) {
+          scene.anims.create({
+            key: animKey,
+            frames: scene.anims.generateFrameNumbers(textureKey, { start: 0, end: frameCount - 1 }),
+            frameRate: 8,
+            repeat: -1,
+          });
+        }
+      }
+      const sprite = scene.add.sprite(0, 0, textureKey);
+      sprite.setScale(ANIM_SCALE);
+      sprite.setOrigin(0.5, 0.97);
+      sprite.setDepth(10);
+      sprite.setVisible(false);
+      this.sprites[id] = { sprite, key: animKey };
+      console.log(`[PlayerRenderer] Created sprite '${id}' with texture '${textureKey}', anim '${animKey}'`);
     };
 
     addAnim('runDribble', dribbleAnimKey);

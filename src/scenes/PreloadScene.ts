@@ -103,11 +103,11 @@ export class PreloadScene extends Phaser.Scene {
       hideOnComplete: false,
     });
 
-    // Crossover — play once, hold last frame, slower
+    // Crossover — play once, hold last frame, very slow
     this.anims.create({
       key: 'breezy-crossover-anim',
       frames: this.anims.generateFrameNumbers('breezy-crossover', { start: 0, end: 3 }),
-      frameRate: 6,
+      frameRate: 3,
       repeat: 0,
       hideOnComplete: false,
     });
