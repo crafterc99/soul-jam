@@ -205,9 +205,8 @@ export class GameSimulation {
       }
     }
 
-    // Defender faces the offense player
-    if (defense.fsm.isInState(PLAYER_STATE.DEFENDING) ||
-        defense.fsm.isInState(PLAYER_STATE.STEAL_REACH)) {
+    // Defender always faces the offense player (regardless of stance)
+    if (!defense.hasBall) {
       const toOffense = offense.position.subtract(defense.position);
       defense.facingAngle = Math.atan2(toOffense.y, toOffense.x);
     }
