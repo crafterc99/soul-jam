@@ -142,7 +142,7 @@ export class PlayerRenderer {
 
     // For defense: determine if moving backward (away from facing) or forward/lateral
     let isMovingBackward = false;
-    if (isDefending && isMoving) {
+    if (!p.hasBall && isMoving) {
       const faceDirX = Math.cos(p.facingAngle);
       const faceDirY = Math.sin(p.facingAngle);
       const dot = (p.velocity.x * faceDirX + p.velocity.y * faceDirY) / speed;
@@ -160,22 +160,22 @@ export class PlayerRenderer {
       activeId = 'crossover';
     } else if (isStealReach && this.sprites['steal']) {
       activeId = 'steal';
-    } else if (isDefending && isMoving && isMovingBackward && this.sprites['backpedal']) {
-      // Moving backward (retreating from offense) → backpedal animation
-      activeId = 'backpedal';
-    } else if (isDefending && isMoving && this.sprites['shuffle']) {
-      // Moving forward or laterally in defense → shuffle animation (looping)
-      activeId = 'shuffle';
-    } else if (isDefending && !isMoving && this.sprites['shuffle']) {
-      // Standing still in defense → shuffle frame 0 (static stance)
-      activeId = 'shuffle';
-    } else if (isDefending && isMoving && !this.sprites['shuffle'] && this.sprites['backpedal']) {
-      // Fallback: use backpedal for any defense movement if shuffle missing
-      activeId = 'backpedal';
-    } else if (isMoving && p.hasBall && !isShooting && !isStepback && !isCrossover && this.sprites['runDribble']) {
+    } else if (p.hasBall && isMoving && this.sprites['runDribble']) {
       activeId = 'runDribble';
-    } else if (!isMoving && p.hasBall && !isShooting && !isStepback && !isCrossover && !isDefending && this.sprites['idleDribble']) {
+    } else if (p.hasBall && !isMoving && this.sprites['idleDribble']) {
       activeId = 'idleDribble';
+    } else if (!p.hasBall && isMoving && isMovingBackward && this.sprites['backpedal']) {
+      // No ball + moving backward → backpedal animation
+      activeId = 'backpedal';
+    } else if (!p.hasBall && isMoving && this.sprites['shuffle']) {
+      // No ball + moving forward/laterally → shuffle animation (looping)
+      activeId = 'shuffle';
+    } else if (!p.hasBall && isMoving && !this.sprites['shuffle'] && this.sprites['backpedal']) {
+      // Fallback: use backpedal for any no-ball movement if shuffle missing
+      activeId = 'backpedal';
+    } else if (!p.hasBall && !isMoving && this.sprites['shuffle']) {
+      // No ball + standing still → shuffle frame 0 (static defense stance)
+      activeId = 'shuffle';
     }
 
     // Hide ball during dribble anims, stepback (dead ball), jumpshot, and crossover
@@ -235,8 +235,8 @@ export class PlayerRenderer {
         }
       }
 
-      // Defense ring
-      if (isDefending) {
+      // Defense ring (shown whenever player doesn't have the ball)
+      if (!p.hasBall) {
         const pulse = 0.4 + Math.sin(Date.now() * 0.006) * 0.2;
         g.lineStyle(2, 0xffff00, pulse);
         g.strokeCircle(p.position.x, p.position.y + 2, PLAYER_RADIUS + 4);
