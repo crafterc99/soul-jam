@@ -172,15 +172,22 @@ export class GameSimulation {
       this.executeSteal(offense, defense);
     }
 
-    // Ball handler faces towards hoop when idle (after stopping from dribble)
-    if (offense.hasBall && offense.fsm.isInState(PLAYER_STATE.IDLE)) {
+    // Update players
+    offense.update(dt);
+    defense.update(dt);
+
+    // Ball handler faces towards hoop when not actively running
+    if (offense.hasBall && !offense.fsm.isInState(PLAYER_STATE.RUN)) {
       const toHoopDir = this.court.hoopPosition.subtract(offense.position);
       offense.facingAngle = Math.atan2(toHoopDir.y, toHoopDir.x);
     }
 
-    // Update players
-    offense.update(dt);
-    defense.update(dt);
+    // Defender faces the offense player
+    if (defense.fsm.isInState(PLAYER_STATE.DEFENDING) ||
+        defense.fsm.isInState(PLAYER_STATE.STEAL_REACH)) {
+      const toOffense = offense.position.subtract(defense.position);
+      defense.facingAngle = Math.atan2(toOffense.y, toOffense.x);
+    }
 
     // Clamp burst moves to court bounds (prevent OOB from stepback/crossover)
     if (offense.fsm.isInState(PLAYER_STATE.STEPBACK) ||
