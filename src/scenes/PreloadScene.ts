@@ -47,9 +47,10 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('select-99', 'assets/images/99-player-select.webp');
     this.load.image('select-breezy', 'assets/images/breezy-player-select.webp');
 
-    // All Breezy animations use uniform 180x180 frame cells
+    // All animations use uniform 180x180 frame cells
     const F = { frameWidth: 180, frameHeight: 180 };
 
+    // Breezy animations
     this.load.spritesheet('breezy-static-dribble', 'assets/images/breezy-static-dribble.png', F);
     this.load.spritesheet('breezy-dribble', 'assets/images/breezy-dribble.png', F);
     this.load.spritesheet('breezy-jumpshot', 'assets/images/breezy-jumpshot.png', F);
@@ -58,6 +59,16 @@ export class PreloadScene extends Phaser.Scene {
     this.load.spritesheet('breezy-defense-backpedal', 'assets/images/breezy-defense-backpedal.png', F);
     this.load.spritesheet('breezy-defense-shuffle', 'assets/images/breezy-defense-shuffle.png', F);
     this.load.spritesheet('breezy-steal', 'assets/images/breezy-steal.png', F);
+
+    // Character 99 animations (same structure as Breezy)
+    this.load.spritesheet('99-static-dribble', 'assets/images/99-static-dribble.png', F);
+    this.load.spritesheet('99-dribble', 'assets/images/99-dribble.png', F);
+    this.load.spritesheet('99-jumpshot', 'assets/images/99-jumpshot.png', F);
+    this.load.spritesheet('99-stepback', 'assets/images/99-stepback.png', F);
+    this.load.spritesheet('99-crossover', 'assets/images/99-crossover.png', F);
+    this.load.spritesheet('99-defense-backpedal', 'assets/images/99-defense-backpedal.png', F);
+    this.load.spritesheet('99-defense-shuffle', 'assets/images/99-defense-shuffle.png', F);
+    this.load.spritesheet('99-steal', 'assets/images/99-steal.png', F);
 
     // Legacy defense slides (kept for now, can be removed later)
     this.load.spritesheet('breezy-defensive-slide-left', 'assets/images/breezy-defensive-slide-left.png', {
@@ -132,6 +143,67 @@ export class PreloadScene extends Phaser.Scene {
     this.anims.create({
       key: 'breezy-steal-anim',
       frames: this.anims.generateFrameNumbers('breezy-steal', { start: 0, end: 2 }),
+      frameRate: 8,
+      repeat: 0,
+      hideOnComplete: false,
+    });
+
+    // ─── Character 99 animations (mirroring Breezy's structure) ───
+    this.anims.create({
+      key: '99-static-dribble-anim',
+      frames: this.anims.generateFrameNumbers('99-static-dribble', { start: 0, end: 5 }),
+      frameRate: 8,
+      repeat: -1,
+    });
+
+    this.anims.create({
+      key: '99-dribble-anim',
+      frames: this.anims.generateFrameNumbers('99-dribble', { start: 0, end: 7 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+
+    this.anims.create({
+      key: '99-jumpshot-anim',
+      frames: this.anims.generateFrameNumbers('99-jumpshot', { start: 0, end: 6 }),
+      frameRate: 8,
+      repeat: 0,
+      hideOnComplete: false,
+    });
+
+    this.anims.create({
+      key: '99-stepback-anim',
+      frames: this.anims.generateFrameNumbers('99-stepback', { start: 0, end: 3 }),
+      frameRate: 8,
+      repeat: 0,
+      hideOnComplete: false,
+    });
+
+    this.anims.create({
+      key: '99-crossover-anim',
+      frames: this.anims.generateFrameNumbers('99-crossover', { start: 0, end: 3 }),
+      frameRate: 13,
+      repeat: 0,
+      hideOnComplete: false,
+    });
+
+    this.anims.create({
+      key: '99-defense-backpedal-anim',
+      frames: this.anims.generateFrameNumbers('99-defense-backpedal', { start: 0, end: 3 }),
+      frameRate: 8,
+      repeat: -1,
+    });
+
+    this.anims.create({
+      key: '99-defense-shuffle-anim',
+      frames: this.anims.generateFrameNumbers('99-defense-shuffle', { start: 0, end: 1 }),
+      frameRate: 6,
+      repeat: -1,
+    });
+
+    this.anims.create({
+      key: '99-steal-anim',
+      frames: this.anims.generateFrameNumbers('99-steal', { start: 0, end: 2 }),
       frameRate: 8,
       repeat: 0,
       hideOnComplete: false,
