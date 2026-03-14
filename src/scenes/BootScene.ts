@@ -16,6 +16,16 @@ export class BootScene extends Phaser.Scene {
     const splash = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'loading-screen');
     splash.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
 
+    // "you are agenius" text
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.4, 'you are agenius', {
+      fontSize: '32px',
+      fontFamily: 'monospace',
+      color: '#ffcc00',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4,
+    }).setOrigin(0.5);
+
     // "PRESS START" overlay
     const pressStart = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.82, 'PRESS START', {
       fontSize: '36px',
