@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { SCENE_BOOT, SCENE_PRELOAD, GAME_WIDTH, GAME_HEIGHT } from '../config/Constants';
+import { getActiveSkin } from '../data/skins';
+import { ScreenBackgroundRenderer } from '../rendering/ScreenBackgroundRenderer';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -12,9 +14,10 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Show splash screen
-    const splash = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'loading-screen');
-    splash.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+    const skin = getActiveSkin();
+
+    // Show splash screen from skin
+    ScreenBackgroundRenderer.render(this, skin.screens.boot);
 
     // "you are agenius" text
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.4, 'you are agenius', {

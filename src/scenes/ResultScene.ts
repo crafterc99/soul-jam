@@ -4,8 +4,10 @@ import { CHARACTERS } from '../data/Characters';
 import { COURTS } from '../data/courts';
 import { MatchConfig } from '../data/types';
 import { getTheme } from '../data/theme';
+import { getActiveSkin } from '../data/skins';
 import { getStorageService } from '../services/StorageService';
 import { createDefaultMatchConfig } from '../data/match';
+import { ScreenBackgroundRenderer } from '../rendering/ScreenBackgroundRenderer';
 
 interface ResultData {
   matchConfig: MatchConfig;
@@ -30,6 +32,7 @@ export class ResultScene extends Phaser.Scene {
 
   create(): void {
     const theme = getTheme();
+    const skin = getActiveSkin();
     const { matchConfig, scores, winner } = this.resultData;
     const storage = getStorageService();
 
@@ -44,9 +47,8 @@ export class ResultScene extends Phaser.Scene {
       storage.incrementTotalGames();
     }
 
-    // Background
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT,
-      parseInt(theme.colors.background.replace('#', ''), 16));
+    // Background from skin
+    ScreenBackgroundRenderer.render(this, skin.screens.result);
 
     // Winner portrait
     if (winner !== null) {
@@ -100,7 +102,7 @@ export class ResultScene extends Phaser.Scene {
     // Unlock popup
     if (newUnlocks.length > 0) {
       const unlockY = 280;
-      this.add.text(GAME_WIDTH / 2, unlockY, '✨ NEW UNLOCK! ✨', {
+      this.add.text(GAME_WIDTH / 2, unlockY, '\u2728 NEW UNLOCK! \u2728', {
         fontSize: '24px',
         fontFamily: theme.fonts.heading,
         color: '#ffcc00',

@@ -1,4 +1,6 @@
 import { CharacterDef, CourtDef } from '../data/types';
+import { SkinBundle } from '../data/skins/types';
+import { collectAllSlots } from '../rendering/slotUtils';
 
 interface AssetEntry {
   path: string;
@@ -59,6 +61,24 @@ export class AssetRegistry {
     this.register('loading-screen', 'assets/images/loading-screen.webp', 'image');
     this.register('playerselect-bg', 'assets/images/playerselect.jpg', 'image');
     this.register('basketball', 'assets/images/basketball.png', 'image');
+  }
+
+  registerSkin(skin: SkinBundle): void {
+    const slots = collectAllSlots(skin as unknown as Record<string, unknown>);
+    for (const slot of slots) {
+      if (slot.key && !this.map.has(slot.key)) {
+        // Infer path from key — existing assets already registered by other methods
+        // This catches any NEW skin-only assets not covered by global/character/court registration
+        const ext = slot.key.endsWith('.webp') ? '' : (slot.key.endsWith('.png') ? '' : '.png');
+        const path = `assets/images/${slot.key}${ext}`;
+        this.register(slot.key, path, 'image');
+      }
+      if (slot.fallback && !this.map.has(slot.fallback)) {
+        const ext = slot.fallback.endsWith('.webp') ? '' : (slot.fallback.endsWith('.png') ? '' : '.png');
+        const path = `assets/images/${slot.fallback}${ext}`;
+        this.register(slot.fallback, path, 'image');
+      }
+    }
   }
 }
 

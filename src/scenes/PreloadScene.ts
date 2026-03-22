@@ -2,8 +2,9 @@ import Phaser from 'phaser';
 import { SCENE_PRELOAD, SCENE_CHARACTER_SELECT, GAME_WIDTH, GAME_HEIGHT } from '../config/Constants';
 import { CHARACTERS } from '../data/Characters';
 import { COURTS } from '../data/courts';
-import { buildAssetRegistry, getAssetRegistry } from '../services/AssetRegistry';
+import { buildAssetRegistry } from '../services/AssetRegistry';
 import { AnimationLoader } from '../rendering/AnimationLoader';
+import { getActiveSkin } from '../data/skins';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -39,8 +40,9 @@ export class PreloadScene extends Phaser.Scene {
       progressBox.destroy();
     });
 
-    // Build asset registry from all character + court defs
+    // Build asset registry from all character + court defs + active skin
     const registry = buildAssetRegistry(CHARACTERS, COURTS);
+    registry.registerSkin(getActiveSkin());
 
     // Load all registered assets
     for (const [key, entry] of registry.getAll()) {

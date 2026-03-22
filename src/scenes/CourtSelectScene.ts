@@ -1,9 +1,12 @@
 import Phaser from 'phaser';
 import { SCENE_COURT_SELECT, SCENE_GAME, SCENE_CHARACTER_SELECT, GAME_WIDTH, GAME_HEIGHT } from '../config/Constants';
-import { COURTS, getCourtIds, getDefaultCourtId } from '../data/courts';
+import { COURTS, getCourtIds } from '../data/courts';
 import { createDefaultMatchConfig } from '../data/match';
 import { getTheme } from '../data/theme';
+import { getActiveSkin } from '../data/skins';
 import { getStorageService } from '../services/StorageService';
+import { ScreenBackgroundRenderer } from '../rendering/ScreenBackgroundRenderer';
+import { CardRenderer } from '../rendering/CardRenderer';
 
 interface SceneData {
   mode: 'cpu' | 'local2p';
@@ -32,11 +35,12 @@ export class CourtSelectScene extends Phaser.Scene {
 
   create(): void {
     const theme = getTheme();
+    const skin = getActiveSkin();
     const storage = getStorageService();
+    const cardSkin = skin.courtCard;
 
-    // Background
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT,
-      parseInt(theme.colors.background.replace('#', ''), 16));
+    // Background from skin
+    ScreenBackgroundRenderer.render(this, skin.screens.courtSelect);
 
     // Title
     this.add.text(GAME_WIDTH / 2, 60, 'SELECT COURT', {
@@ -62,64 +66,26 @@ export class CourtSelectScene extends Phaser.Scene {
       color: theme.colors.textDim,
     }).setOrigin(0.5);
 
-    // Create court cards horizontally
-    const cardWidth = 280;
-    const cardHeight = 180;
+    // Create court cards using CardRenderer
+    const { width } = cardSkin.size;
     const gap = 40;
-    const totalWidth = this.courtIds.length * cardWidth + (this.courtIds.length - 1) * gap;
-    const startX = (GAME_WIDTH - totalWidth) / 2 + cardWidth / 2;
+    const totalWidth = this.courtIds.length * width + (this.courtIds.length - 1) * gap;
+    const startX = (GAME_WIDTH - totalWidth) / 2 + width / 2;
 
     this.courtCards = this.courtIds.map((id, i) => {
       const courtDef = COURTS[id];
-      const x = startX + i * (cardWidth + gap);
+      const x = startX + i * (width + gap);
       const y = GAME_HEIGHT / 2 + 20;
-
-      const container = this.add.container(x, y);
-
-      // Card background
-      const bg = this.add.rectangle(0, 0, cardWidth, cardHeight, 0x222244, 1);
-      bg.setStrokeStyle(3, 0x444466);
-      container.add(bg);
-
-      // Court thumbnail
-      if (this.textures.exists(courtDef.assets.thumbnail)) {
-        const thumb = this.add.image(0, 0, courtDef.assets.thumbnail);
-        thumb.setDisplaySize(cardWidth - 10, cardHeight - 10);
-        thumb.setAlpha(0.6);
-        container.add(thumb);
-      }
-
-      // Court name on card
-      const nameText = this.add.text(0, cardHeight / 2 - 20, courtDef.name, {
-        fontSize: '18px',
-        fontFamily: theme.fonts.heading,
-        color: theme.colors.text,
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 3,
-      }).setOrigin(0.5);
-      container.add(nameText);
-
-      // Lock overlay
       const isLocked = !storage.isCourtUnlocked(id) && !courtDef.unlocked;
-      if (isLocked) {
-        const lockOverlay = this.add.rectangle(0, 0, cardWidth, cardHeight, 0x000000, 0.7);
-        container.add(lockOverlay);
 
-        const lockIcon = this.add.text(0, -15, '🔒', {
-          fontSize: '36px',
-        }).setOrigin(0.5);
-        container.add(lockIcon);
-
-        const lockLabel = this.add.text(0, 25, courtDef.unlockCondition?.replace(/_/g, ' ').toUpperCase() ?? 'LOCKED', {
-          fontSize: '12px',
-          fontFamily: theme.fonts.body,
-          color: '#ff6666',
-        }).setOrigin(0.5);
-        container.add(lockLabel);
-      }
-
-      return container;
+      return CardRenderer.create(this, cardSkin, {
+        x,
+        y,
+        name: courtDef.name,
+        thumbnailKey: courtDef.assets.thumbnail,
+        isLocked,
+        lockLabel: courtDef.unlockCondition?.replace(/_/g, ' ').toUpperCase() ?? 'LOCKED',
+      });
     });
 
     this.updateSelection();
@@ -173,24 +139,17 @@ export class CourtSelectScene extends Phaser.Scene {
 
   private updateSelection(): void {
     const storage = getStorageService();
+    const skin = getActiveSkin();
 
-    this.courtCards.forEach((card, i) => {
-      if (i === this.selection) {
-        card.setScale(1.1);
-        card.setAlpha(1);
-      } else {
-        card.setScale(0.9);
-        card.setAlpha(0.6);
-      }
-    });
+    CardRenderer.updateSelection(this.courtCards, this.selection, skin.courtCard);
 
     const courtDef = COURTS[this.courtIds[this.selection]];
     const isLocked = !storage.isCourtUnlocked(this.courtIds[this.selection]) && !courtDef.unlocked;
 
     this.courtNameText?.setText(courtDef.name);
     if (isLocked) {
-      this.courtStatusText?.setText('🔒 LOCKED — ' + (courtDef.unlockCondition?.replace(/_/g, ' ').toUpperCase() ?? ''));
-      this.courtStatusText?.setColor('#ff6666');
+      this.courtStatusText?.setText('\uD83D\uDD12 LOCKED \u2014 ' + (courtDef.unlockCondition?.replace(/_/g, ' ').toUpperCase() ?? ''));
+      this.courtStatusText?.setColor(skin.courtCard.lockTextColor);
     } else {
       this.courtStatusText?.setText('AVAILABLE');
       this.courtStatusText?.setColor('#44ff44');

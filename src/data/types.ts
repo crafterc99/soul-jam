@@ -46,12 +46,14 @@ export interface CourtDef {
   name: string;
   unlocked: boolean;
   unlockCondition?: string;
+  skinId?: string;
   assets: {
     floor: string;
     thumbnail: string;
     centerLogo?: string;
     background?: string;
   };
+  /** @deprecated Visual style values have moved to CourtSkinDef in skins/types.ts */
   style: {
     lineColor: string;
     paintColor: string;

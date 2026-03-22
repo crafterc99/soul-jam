@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { SCENE_PAUSE, SCENE_GAME, SCENE_MENU, GAME_WIDTH, GAME_HEIGHT } from '../config/Constants';
+import { getActiveSkin } from '../data/skins';
+import { ScreenBackgroundRenderer } from '../rendering/ScreenBackgroundRenderer';
 
 export class PauseScene extends Phaser.Scene {
   private selectedIndex = 0;
@@ -12,9 +14,10 @@ export class PauseScene extends Phaser.Scene {
 
   create(): void {
     this.selectedIndex = 0;
+    const skin = getActiveSkin();
 
-    // Dim overlay
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7);
+    // Dim overlay from skin
+    ScreenBackgroundRenderer.renderPause(this, skin.screens.pause);
 
     this.add.text(GAME_WIDTH / 2, 200, 'PAUSED', {
       fontSize: '48px',

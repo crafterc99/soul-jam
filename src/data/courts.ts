@@ -5,6 +5,7 @@ export const COURTS: Record<string, CourtDef> = {
     id: 'soul-jam-arena',
     name: 'Soul Jam Arena',
     unlocked: true,
+    skinId: 'default-court',
     assets: {
       floor: 'court',
       thumbnail: 'court',
@@ -22,6 +23,7 @@ export const COURTS: Record<string, CourtDef> = {
     id: 'street',
     name: 'The Street',
     unlocked: false,
+    skinId: 'street-court',
     unlockCondition: 'win_5_matches',
     assets: {
       floor: 'court',

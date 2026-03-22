@@ -3,11 +3,8 @@ import { PlayerSim } from '../simulation/PlayerSim';
 import { PLAYER_RADIUS } from '../config/Constants';
 import { PLAYER_STATE } from '../simulation/PlayerStates';
 import { CharacterDef } from '../data/types';
+import { PlayerEffectsSkinDef } from '../data/skins/types';
 import { AnimationLoader } from './AnimationLoader';
-
-const SPRITE_SCALE = 0.055;
-const ANIM_SCALE = 1.1;
-const DEFENSE_SLIDE_SCALE = 0.197;
 
 export class PlayerRenderer {
   private graphics: Phaser.GameObjects.Graphics;
@@ -22,12 +19,27 @@ export class PlayerRenderer {
 
   isDribbleAnimActive = false;
 
+  private effects: PlayerEffectsSkinDef;
+
   constructor(
     private scene: Phaser.Scene,
     private player: PlayerSim,
     private label: string,
     charDef: CharacterDef,
+    effects?: PlayerEffectsSkinDef,
   ) {
+    this.effects = effects ?? {
+      defenseRing: { color: 0xffff00, alpha: 0.6 },
+      ballGlow: { color: 0xff6600, alpha: 0.6 },
+      stealRing: { color: 0xff3333, alpha: 0.6 },
+      flashRing: { color: 0xffffff, alpha: 0.7 },
+      tints: { shooting: 0xffffcc, crossover: 0xccffcc, stealReach: 0xff6666 },
+      scales: { base: 0.055, anim: 1.1, defenseSlide: 0.197 },
+    };
+
+    const SPRITE_SCALE = this.effects.scales.base;
+    const ANIM_SCALE = this.effects.scales.anim;
+
     this.shadow = scene.add.graphics().setDepth(5);
     this.graphics = scene.add.graphics().setDepth(10);
 
@@ -87,6 +99,9 @@ export class PlayerRenderer {
   update(): void {
     const p = this.player;
     const g = this.graphics;
+    const fx = this.effects;
+    const SPRITE_SCALE = fx.scales.base;
+    const ANIM_SCALE = fx.scales.anim;
 
     g.clear();
     this.shadow.clear();
@@ -191,7 +206,7 @@ export class PlayerRenderer {
       // Defense ring
       if (!p.hasBall) {
         const pulse = 0.4 + Math.sin(Date.now() * 0.006) * 0.2;
-        g.lineStyle(2, 0xffff00, pulse);
+        g.lineStyle(2, fx.defenseRing.color, pulse);
         g.strokeCircle(p.position.x, p.position.y + 2, PLAYER_RADIUS + 4);
       }
 
@@ -209,19 +224,19 @@ export class PlayerRenderer {
       if (isDefending) {
         scale = SPRITE_SCALE * 0.95;
         const pulse = 0.4 + Math.sin(Date.now() * 0.006) * 0.2;
-        g.lineStyle(2, 0xffff00, pulse);
+        g.lineStyle(2, fx.defenseRing.color, pulse);
         g.strokeCircle(p.position.x, p.position.y + 2, PLAYER_RADIUS + 4);
       }
       if (isShooting) {
         scale = SPRITE_SCALE * 1.05;
-        tint = 0xffffcc;
+        tint = fx.tints.shooting;
       }
       if (isCrossover) {
-        tint = 0xccffcc;
+        tint = fx.tints.crossover;
         scale = SPRITE_SCALE * 0.97;
       }
       if (isStealReach) {
-        tint = 0xff6666;
+        tint = fx.tints.stealReach;
         scale = SPRITE_SCALE * 0.93;
       }
 
@@ -232,7 +247,7 @@ export class PlayerRenderer {
 
       if (p.hasBall) {
         const glowPulse = 0.4 + Math.sin(Date.now() * 0.005) * 0.2;
-        g.lineStyle(2, 0xff6600, glowPulse);
+        g.lineStyle(2, fx.ballGlow.color, glowPulse);
         g.strokeCircle(p.position.x, p.position.y - 15, PLAYER_RADIUS + 6);
       }
     } else {
@@ -245,11 +260,11 @@ export class PlayerRenderer {
       g.strokeCircle(p.position.x, p.position.y, PLAYER_RADIUS);
       if (isDefending) {
         const pulse = 0.4 + Math.sin(Date.now() * 0.006) * 0.2;
-        g.lineStyle(2, 0xffff00, pulse);
+        g.lineStyle(2, fx.defenseRing.color, pulse);
         g.strokeCircle(p.position.x, p.position.y, PLAYER_RADIUS + 6);
       }
       if (p.hasBall) {
-        g.lineStyle(2, 0xff6600, 0.8);
+        g.lineStyle(2, fx.ballGlow.color, 0.8);
         g.strokeCircle(p.position.x, p.position.y, PLAYER_RADIUS + 3);
       }
     }
@@ -258,14 +273,14 @@ export class PlayerRenderer {
     if (this.flashTimer > 0) {
       const flashAlpha = this.flashTimer / 0.12;
       const flashRadius = PLAYER_RADIUS + 10 + (1 - flashAlpha) * 15;
-      g.lineStyle(3, 0xffffff, flashAlpha * 0.7);
+      g.lineStyle(3, fx.flashRing.color, flashAlpha * fx.flashRing.alpha);
       g.strokeCircle(p.position.x, p.position.y, flashRadius);
     }
 
     // Steal reach red ring
     if (isStealReach) {
       const reachAlpha = 0.3 + Math.sin(Date.now() * 0.012) * 0.3;
-      g.lineStyle(3, 0xff3333, reachAlpha);
+      g.lineStyle(3, fx.stealRing.color, reachAlpha);
       g.strokeCircle(p.position.x, p.position.y, PLAYER_RADIUS + 8);
     }
 

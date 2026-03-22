@@ -3,14 +3,8 @@ import { GameSimulation } from '../simulation/GameSimulation';
 import { GamePhase } from '../simulation/GameState';
 import { GAME_WIDTH, GAME_HEIGHT, SHOT_TIMING_WINDOW } from '../config/Constants';
 import { PLAYER_STATE } from '../simulation/PlayerStates';
-import { ThemeDef } from '../data/types';
-import { getTheme } from '../data/theme';
-
-// Positions matched to the scoreboard and feedback bar baked into court.webp
-const SCOREBOARD_X = GAME_WIDTH / 2;
-const SCOREBOARD_Y = 38;
-const FEEDBACK_X = GAME_WIDTH / 2;
-const FEEDBACK_Y = GAME_HEIGHT - 52;
+import { HUDSkinDef } from '../data/skins/types';
+import { getActiveSkin } from '../data/skins';
 
 export class HUDRenderer {
   private scoreBackground: Phaser.GameObjects.Rectangle;
@@ -25,44 +19,50 @@ export class HUDRenderer {
   private lastScores: [number, number] = [0, 0];
   private scorePopTimer: number = 0;
 
-  private theme: ThemeDef;
+  private skin: HUDSkinDef;
 
-  constructor(private scene: Phaser.Scene, private sim: GameSimulation, theme?: ThemeDef) {
-    this.theme = theme ?? getTheme();
-    const t = this.theme;
+  constructor(private scene: Phaser.Scene, private sim: GameSimulation, hudSkin?: HUDSkinDef) {
+    this.skin = hudSkin ?? getActiveSkin().hud;
+    const sb = this.skin.scoreboard;
+    const fb = this.skin.feedback;
+    const ch = this.skin.controlsHint;
 
     // Dark background to cover the baked-in scoreboard in court image
-    this.scoreBackground = scene.add.rectangle(SCOREBOARD_X, SCOREBOARD_Y, 200, 48,
-      parseInt(t.colors.surface.replace('#', ''), 16), 0.95)
-      .setDepth(100);
+    this.scoreBackground = scene.add.rectangle(
+      sb.position.x, sb.position.y,
+      sb.bgSize.width, sb.bgSize.height,
+      sb.bgColor, sb.bgAlpha,
+    ).setDepth(100);
 
-    // Score display - positioned over the built-in scoreboard
-    this.scoreText = scene.add.text(SCOREBOARD_X, SCOREBOARD_Y, '', {
-      fontSize: '32px',
-      fontFamily: t.fonts.score,
-      color: t.colors.primary,
+    // Score display
+    this.scoreText = scene.add.text(sb.position.x, sb.position.y, '', {
+      fontSize: sb.scoreSize,
+      fontFamily: sb.scoreFont,
+      color: sb.scoreColor,
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(101);
 
     // Phase text - just below scoreboard
-    this.phaseText = scene.add.text(SCOREBOARD_X, SCOREBOARD_Y + 32, '', {
-      fontSize: '20px',
-      color: '#ffaa00',
+    this.phaseText = scene.add.text(sb.position.x, sb.position.y + 32, '', {
+      fontSize: sb.phaseSize,
+      color: sb.phaseColors.default,
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(101);
 
-    // Feedback background - covers the built-in feedback bar
-    this.feedbackBackground = scene.add.rectangle(FEEDBACK_X, FEEDBACK_Y, 480, 40,
-      parseInt(t.colors.surface.replace('#', ''), 16), 0.9)
-      .setDepth(100);
+    // Feedback background
+    this.feedbackBackground = scene.add.rectangle(
+      fb.position.x, fb.position.y,
+      fb.bgSize.width, fb.bgSize.height,
+      fb.bgColor, fb.bgAlpha,
+    ).setDepth(100);
 
-    // Shot feedback - positioned over the built-in feedback bar
-    this.shotFeedback = scene.add.text(FEEDBACK_X, FEEDBACK_Y, '', {
-      fontSize: '18px',
-      fontFamily: t.fonts.body,
-      color: t.colors.text,
+    // Shot feedback
+    this.shotFeedback = scene.add.text(fb.position.x, fb.position.y, '', {
+      fontSize: fb.fontSize,
+      fontFamily: fb.font,
+      color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(101);
 
@@ -70,15 +70,18 @@ export class HUDRenderer {
     this.timingMeter = scene.add.graphics().setDepth(100);
 
     // Controls hint
-    this.controlsText = scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 12,
+    this.controlsText = scene.add.text(ch.position.x, ch.position.y,
       'WASD: Move | SPACE: Shoot | Q: Stepback | E: Crossover | F: Steal | SHIFT: Defend', {
-      fontSize: '10px',
-      color: t.colors.textDim,
+      fontSize: ch.fontSize,
+      color: ch.color,
     }).setOrigin(0.5).setDepth(101);
   }
 
   update(dt: number): void {
     const snap = this.sim.getSnapshot();
+    const sb = this.skin.scoreboard;
+    const fb = this.skin.feedback;
+    const tm = this.skin.timingMeter;
 
     // Score with pop animation on change
     const scoresChanged =
@@ -92,21 +95,21 @@ export class HUDRenderer {
       this.scorePopTimer -= dt;
       const popScale = 1 + this.scorePopTimer * 0.6;
       this.scoreText.setScale(popScale);
-      this.scoreText.setColor('#ffffff');
+      this.scoreText.setColor(sb.scorePopColor);
     } else {
       this.scoreText.setScale(1);
-      this.scoreText.setColor(this.theme.colors.primary);
+      this.scoreText.setColor(sb.scoreColor);
     }
     this.scoreText.setText(`${snap.scores[0]}  -  ${snap.scores[1]}`);
 
     // Phase text with contextual color
     let phaseLabel = '';
-    let phaseColor = '#ffaa00';
+    let phaseColor = sb.phaseColors.default;
     switch (snap.phase) {
       case GamePhase.CheckBall:
         if (this.sim.lastStealResult === 'success') {
           phaseLabel = 'STOLEN!';
-          phaseColor = '#ff4444';
+          phaseColor = sb.phaseColors.stolen;
         } else {
           phaseLabel = 'CHECK BALL';
         }
@@ -116,20 +119,20 @@ export class HUDRenderer {
       case GamePhase.Shooting: phaseLabel = ''; break;
       case GamePhase.Scored:
         phaseLabel = `SCORED! +${this.sim.lastShotPoints}`;
-        phaseColor = '#44ff44';
+        phaseColor = sb.phaseColors.scored;
         break;
       case GamePhase.Missed:
         phaseLabel = 'MISS!';
-        phaseColor = '#ff4444';
+        phaseColor = sb.phaseColors.missed;
         break;
       case GamePhase.Violation:
         phaseLabel = 'OUT OF BOUNDS';
-        phaseColor = '#ff6644';
+        phaseColor = sb.phaseColors.violation;
         break;
       case GamePhase.GameOver: {
         const winner = this.sim.scoreKeeper.getWinner();
         phaseLabel = winner !== null ? `PLAYER ${winner + 1} WINS!` : 'GAME OVER';
-        phaseColor = '#ffffff';
+        phaseColor = sb.phaseColors.gameOver;
         break;
       }
     }
@@ -154,8 +157,8 @@ export class HUDRenderer {
         this.shotFeedback.setText(
           `${shotType} / ${timing} / ${contest > 0 ? `${contest}% CONTESTED` : 'OPEN'} / ${made ? 'SPLASH!' : 'BRICK!'}`
         );
-        this.shotFeedback.setColor(made ? '#44ff44' : '#ff4444');
-        this.feedbackBackground.setAlpha(0.9);
+        this.shotFeedback.setColor(made ? fb.madeColor : fb.missedColor);
+        this.feedbackBackground.setAlpha(fb.bgAlpha);
         this.feedbackTimer = 2.5;
       }
     }
@@ -164,8 +167,8 @@ export class HUDRenderer {
     if (this.sim.lastStealResult === 'success' && snap.phase === GamePhase.CheckBall) {
       if (this.feedbackTimer <= 0) {
         this.shotFeedback.setText('BALL STOLEN!');
-        this.shotFeedback.setColor('#ff6644');
-        this.feedbackBackground.setAlpha(0.9);
+        this.shotFeedback.setColor(fb.stealColor);
+        this.feedbackBackground.setAlpha(fb.bgAlpha);
         this.feedbackTimer = 1.5;
       }
     }
@@ -174,30 +177,30 @@ export class HUDRenderer {
     this.timingMeter.clear();
     const offense = this.sim.offensePlayer;
     if (offense.fsm.isInState(PLAYER_STATE.SHOOTING) && !offense.shotReleased) {
-      const meterW = 220;
-      const meterH = 24;
-      const meterX = (GAME_WIDTH - meterW) / 2;
-      const meterY = 12;
+      const meterW = tm.size.width;
+      const meterH = tm.size.height;
+      const meterX = tm.position.x;
+      const meterY = tm.position.y;
 
       // Outer border
-      this.timingMeter.lineStyle(3, 0x1a1a3a, 1);
-      this.timingMeter.fillStyle(0x0a0a2a, 0.9);
+      this.timingMeter.lineStyle(3, tm.borderColor, 1);
+      this.timingMeter.fillStyle(tm.bgColor, 0.9);
       this.timingMeter.fillRect(meterX, meterY, meterW, meterH);
       this.timingMeter.strokeRect(meterX, meterY, meterW, meterH);
 
       // Fill based on timing
       const progress = Math.min(offense.stateTimer / SHOT_TIMING_WINDOW, 1);
 
-      let color = 0xff4444;
+      let color = tm.zones.early;
       let alpha = 1;
       if (progress > 0.80 && progress < 0.92) {
-        color = 0x44ff44;
+        color = tm.zones.perfect;
         alpha = 1;
       } else if (progress > 0.65) {
-        color = 0x88ff44;
+        color = tm.zones.good;
         alpha = 0.95;
       } else if (progress > 0.45) {
-        color = 0xffaa00;
+        color = tm.zones.decent;
         alpha = 0.9;
       }
 
@@ -207,8 +210,8 @@ export class HUDRenderer {
       // Perfect zone highlight box
       const zoneStart = 0.80;
       const zoneEnd = 0.92;
-      this.timingMeter.lineStyle(2, 0x44ff44, 0.4);
-      this.timingMeter.fillStyle(0x44ff44, 0.12);
+      this.timingMeter.lineStyle(2, tm.zones.perfect, 0.4);
+      this.timingMeter.fillStyle(tm.zones.perfect, 0.12);
       this.timingMeter.fillRect(
         meterX + 2 + (meterW - 4) * zoneStart, meterY + 2,
         (meterW - 4) * (zoneEnd - zoneStart), meterH - 4,
@@ -221,7 +224,7 @@ export class HUDRenderer {
       // Perfect zone center marker with pulse
       const perfectZone = 0.85;
       const glowPulse = 0.5 + Math.sin(Date.now() * 0.012) * 0.5;
-      this.timingMeter.lineStyle(2, 0xffffff, glowPulse);
+      this.timingMeter.lineStyle(2, tm.perfectMarker, glowPulse);
       this.timingMeter.lineBetween(
         meterX + 2 + (meterW - 4) * perfectZone, meterY,
         meterX + 2 + (meterW - 4) * perfectZone, meterY + meterH,

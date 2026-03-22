@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { SCENE_MENU, SCENE_CHARACTER_SELECT, SCENE_LEADERBOARD, GAME_WIDTH, GAME_HEIGHT } from '../config/Constants';
 import { getTheme } from '../data/theme';
+import { getActiveSkin } from '../data/skins';
+import { ScreenBackgroundRenderer } from '../rendering/ScreenBackgroundRenderer';
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -9,13 +11,10 @@ export class MenuScene extends Phaser.Scene {
 
   create(): void {
     const theme = getTheme();
+    const skin = getActiveSkin();
 
-    // Loading screen IS the menu screen
-    const bgKey = theme.assets.menuBg ?? 'loading-screen';
-    if (this.textures.exists(bgKey)) {
-      const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, bgKey);
-      bg.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
-    }
+    // Background from skin
+    ScreenBackgroundRenderer.render(this, skin.screens.menu);
 
     // Blinking "PRESS START" at bottom
     const pressStart = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 80, 'PRESS START', {

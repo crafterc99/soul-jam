@@ -2,8 +2,10 @@ import Phaser from 'phaser';
 import { SCENE_LEADERBOARD, SCENE_MENU, GAME_WIDTH, GAME_HEIGHT } from '../config/Constants';
 import { CHARACTERS, getCharacterIds } from '../data/Characters';
 import { getTheme } from '../data/theme';
+import { getActiveSkin } from '../data/skins';
 import { getStorageService } from '../services/StorageService';
 import { LeaderboardEntry } from '../data/types';
+import { ScreenBackgroundRenderer } from '../rendering/ScreenBackgroundRenderer';
 
 export class LeaderboardScene extends Phaser.Scene {
   constructor() {
@@ -12,12 +14,12 @@ export class LeaderboardScene extends Phaser.Scene {
 
   create(): void {
     const theme = getTheme();
+    const skin = getActiveSkin();
     const storage = getStorageService();
     const leaderboard = storage.getLeaderboard();
 
-    // Background
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT,
-      parseInt(theme.colors.background.replace('#', ''), 16));
+    // Background from skin
+    ScreenBackgroundRenderer.render(this, skin.screens.leaderboard);
 
     // Title
     this.add.text(GAME_WIDTH / 2, 50, 'LEADERBOARD', {

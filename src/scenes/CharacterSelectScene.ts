@@ -3,6 +3,7 @@ import { SCENE_CHARACTER_SELECT, SCENE_COURT_SELECT, SCENE_BOOT, GAME_WIDTH, GAM
 import { CHARACTERS, getCharacterIds } from '../data/Characters';
 import { getStorageService } from '../services/StorageService';
 import { getTheme } from '../data/theme';
+import { getActiveSkin } from '../data/skins';
 
 interface SceneData {
   mode: 'cpu' | 'local2p';
@@ -33,7 +34,9 @@ export class CharacterSelectScene extends Phaser.Scene {
 
   create(): void {
     const theme = getTheme();
+    const skin = getActiveSkin();
     const storage = getStorageService();
+    const charCard = skin.characterCard;
 
     // Background — swaps based on selection
     this.bgImage = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'playerselect-bg');
@@ -42,9 +45,9 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     // Character name display
     this.charNameText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.12, '', {
-      fontSize: '42px',
-      fontFamily: theme.fonts.heading,
-      color: theme.colors.primary,
+      fontSize: charCard.nameSize,
+      fontFamily: charCard.nameFont,
+      color: charCard.nameColor,
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 5,
@@ -136,13 +139,13 @@ export class CharacterSelectScene extends Phaser.Scene {
   }
 
   private updateLockState(charUnlocks: Record<string, boolean>): void {
-    // We'll show a lock indicator text if current character is locked
     const selectedCharId = this.characterIds[this.p1Selection];
+    const skin = getActiveSkin();
     const isLocked = !(charUnlocks[selectedCharId] ?? CHARACTERS[selectedCharId]?.unlocked);
 
     if (isLocked && this.charTitleText) {
-      this.charTitleText.setText('🔒 LOCKED');
-      this.charTitleText.setColor('#ff4444');
+      this.charTitleText.setText('\uD83D\uDD12 LOCKED');
+      this.charTitleText.setColor(skin.characterCard.lockTextColor);
     } else if (this.charTitleText) {
       const charDef = CHARACTERS[selectedCharId];
       this.charTitleText.setText(charDef?.title ?? '');

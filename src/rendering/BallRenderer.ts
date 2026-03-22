@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { BallSim } from '../simulation/BallSim';
 import { BALL_RADIUS } from '../config/Constants';
+import { AssetSlot } from '../data/skins/types';
+import { resolveSlotKey } from './slotUtils';
 
 export class BallRenderer {
   private graphics: Phaser.GameObjects.Graphics;
@@ -8,16 +10,17 @@ export class BallRenderer {
   private sprite: Phaser.GameObjects.Image | null = null;
   hidden: boolean = false; // hide when dribble animation includes the ball
 
-  constructor(private scene: Phaser.Scene, private ball: BallSim) {
+  constructor(private scene: Phaser.Scene, private ball: BallSim, slot?: AssetSlot) {
     this.shadow = scene.add.graphics().setDepth(5);
     this.graphics = scene.add.graphics().setDepth(50);
 
-    // Use basketball sprite
-    if (scene.textures.exists('basketball')) {
-      this.sprite = scene.add.image(0, 0, 'basketball');
+    // Use basketball sprite from slot or fallback to 'basketball'
+    const textureKey = slot ? resolveSlotKey(scene, slot) : (scene.textures.exists('basketball') ? 'basketball' : undefined);
+    if (textureKey) {
+      this.sprite = scene.add.image(0, 0, textureKey);
       const diameter = BALL_RADIUS * 2.8;  // slightly bigger than hitbox
       this.sprite.setDisplaySize(diameter, diameter);
-      this.sprite.setDepth(50);
+      this.sprite.setDepth(slot?.depth ?? 50);
       this.sprite.setVisible(false);
     }
   }

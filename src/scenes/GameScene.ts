@@ -8,9 +8,8 @@ import { NullInputProvider } from '../input/NullInputProvider';
 import { GameSimulation } from '../simulation/GameSimulation';
 import { GamePhase } from '../simulation/GameState';
 import { CHARACTERS } from '../data/Characters';
-import { getCourtDef } from '../data/courts';
-import { getTheme } from '../data/theme';
 import { MatchConfig } from '../data/types';
+import { getActiveSkin } from '../data/skins';
 import { CourtRenderer } from '../rendering/CourtRenderer';
 import { PlayerRenderer } from '../rendering/PlayerRenderer';
 import { BallRenderer } from '../rendering/BallRenderer';
@@ -44,8 +43,7 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     const p1Char = CHARACTERS[this.matchConfig.p1CharacterId];
     const p2Char = CHARACTERS[this.matchConfig.p2CharacterId];
-    const courtDef = getCourtDef(this.matchConfig.courtId);
-    const theme = getTheme();
+    const skin = getActiveSkin();
 
     // Setup simulation
     this.sim = new GameSimulation(p1Char, p2Char);
@@ -67,14 +65,14 @@ export class GameScene extends Phaser.Scene {
       this.aiController = new AIController(1, this.matchConfig.aiDifficulty);
     }
 
-    // Setup renderers with new data-driven configs
-    this.courtRenderer = new CourtRenderer(this, courtDef);
+    // Setup renderers with skin-driven configs
+    this.courtRenderer = new CourtRenderer(this, skin.court);
     this.playerRenderers = [
-      new PlayerRenderer(this, this.sim.players[0], `P1 ${p1Char.name}`, p1Char),
-      new PlayerRenderer(this, this.sim.players[1], `P2 ${p2Char.name}`, p2Char),
+      new PlayerRenderer(this, this.sim.players[0], `P1 ${p1Char.name}`, p1Char, skin.playerEffects),
+      new PlayerRenderer(this, this.sim.players[1], `P2 ${p2Char.name}`, p2Char, skin.playerEffects),
     ];
-    this.ballRenderer = new BallRenderer(this, this.sim.ball);
-    this.hudRenderer = new HUDRenderer(this, this.sim, theme);
+    this.ballRenderer = new BallRenderer(this, this.sim.ball, skin.ball);
+    this.hudRenderer = new HUDRenderer(this, this.sim, skin.hud);
 
     // Pause handling
     this.input.keyboard?.on('keydown-ESC', () => {
