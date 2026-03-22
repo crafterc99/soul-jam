@@ -2,12 +2,11 @@ import Phaser from 'phaser';
 import { PlayerSim } from '../simulation/PlayerSim';
 import { PLAYER_RADIUS } from '../config/Constants';
 import { PLAYER_STATE } from '../simulation/PlayerStates';
+import { CharacterDef } from '../data/types';
+import { AnimationLoader } from './AnimationLoader';
 
 const SPRITE_SCALE = 0.055;
-// All animations use uniform 180x180 cells. Scale 1.1 → ~200px character display.
-// Same scale, same origin for every animation — no per-anim recalibration.
 const ANIM_SCALE = 1.1;
-// Legacy defense slides are still 480x717 from earlier reprocessing
 const DEFENSE_SLIDE_SCALE = 0.197;
 
 export class PlayerRenderer {
@@ -16,12 +15,9 @@ export class PlayerRenderer {
   private nameText: Phaser.GameObjects.Text;
   private shadow: Phaser.GameObjects.Graphics;
 
-  // Animation sprites — all 180x180 use ANIM_SCALE and origin (0.5, 0.97)
   private sprites: Record<string, { sprite: Phaser.GameObjects.Sprite; key: string }> = {};
-  // Legacy defense slides (480x717)
   private legacySlides: Record<string, { sprite: Phaser.GameObjects.Sprite; key: string }> = {};
 
-  // Visual juice timers
   private flashTimer = 0;
 
   isDribbleAnimActive = false;
@@ -30,77 +26,48 @@ export class PlayerRenderer {
     private scene: Phaser.Scene,
     private player: PlayerSim,
     private label: string,
-    spriteKey: string,
-    dribbleAnimKey?: string,
-    idleDribbleAnimKey?: string,
-    defensiveSlideLeftAnimKey?: string,
-    defensiveSlideRightAnimKey?: string,
-    jumpshotAnimKey?: string,
-    stepbackAnimKey?: string,
-    crossoverAnimKey?: string,
-    defenseBackpedalAnimKey?: string,
-    defenseShuffleAnimKey?: string,
-    stealAnimKey?: string,
+    charDef: CharacterDef,
   ) {
     this.shadow = scene.add.graphics().setDepth(5);
     this.graphics = scene.add.graphics().setDepth(10);
 
-    // Helper to create 180x180 animation sprite
-    const addAnim = (id: string, animKey?: string) => {
+    // Helper to create 180x180 animation sprite from CharacterDef
+    const addAnim = (id: string, animName: string) => {
+      const animKey = AnimationLoader.getAnimKey(charDef, animName);
       if (!animKey) return;
-      const textureKey = animKey.replace('-anim', '');
+
+      const animDef = charDef.sprites.animations[animName];
+      if (!animDef) return;
+
+      const textureKey = animDef.textureKey;
       if (!scene.textures.exists(textureKey)) {
         console.warn(`[PlayerRenderer] Texture '${textureKey}' not found for ${id}`);
         return;
       }
       if (!scene.anims.exists(animKey)) {
-        console.warn(`[PlayerRenderer] Animation '${animKey}' not found for ${id}, creating from texture`);
-        // Try to create the animation on-the-fly from the texture
-        const frameCount = scene.textures.get(textureKey).getFrameNames().length ||
-          Object.keys(scene.textures.get(textureKey).frames).length - 1; // -1 for __BASE
-        if (frameCount > 0) {
-          scene.anims.create({
-            key: animKey,
-            frames: scene.anims.generateFrameNumbers(textureKey, { start: 0, end: frameCount - 1 }),
-            frameRate: 8,
-            repeat: -1,
-          });
-        }
+        console.warn(`[PlayerRenderer] Animation '${animKey}' not found for ${id}`);
+        return;
       }
+
       const sprite = scene.add.sprite(0, 0, textureKey);
       sprite.setScale(ANIM_SCALE);
       sprite.setOrigin(0.5, 0.97);
       sprite.setDepth(10);
       sprite.setVisible(false);
       this.sprites[id] = { sprite, key: animKey };
-      console.log(`[PlayerRenderer] Created sprite '${id}' with texture '${textureKey}', anim '${animKey}'`);
     };
 
-    addAnim('runDribble', dribbleAnimKey);
-    addAnim('idleDribble', idleDribbleAnimKey);
-    addAnim('jumpshot', jumpshotAnimKey);
-    addAnim('stepback', stepbackAnimKey);
-    addAnim('crossover', crossoverAnimKey);
-    addAnim('backpedal', defenseBackpedalAnimKey);
-    addAnim('shuffle', defenseShuffleAnimKey);
-    addAnim('steal', stealAnimKey);
+    addAnim('runDribble', 'runDribble');
+    addAnim('idleDribble', 'idleDribble');
+    addAnim('jumpshot', 'jumpshot');
+    addAnim('stepback', 'stepback');
+    addAnim('crossover', 'crossover');
+    addAnim('backpedal', 'backpedal');
+    addAnim('shuffle', 'shuffle');
+    addAnim('steal', 'steal');
 
-    // Legacy defense slides (480x717, different scale/origin)
-    const addLegacy = (id: string, animKey?: string) => {
-      if (animKey && scene.anims.exists(animKey)) {
-        const sprite = scene.add.sprite(0, 0, animKey.replace('-anim', ''));
-        sprite.setScale(DEFENSE_SLIDE_SCALE);
-        sprite.setOrigin(0.5, 0.85);
-        sprite.setDepth(10);
-        sprite.setVisible(false);
-        this.legacySlides[id] = { sprite, key: animKey };
-      }
-    };
-
-    addLegacy('slideLeft', defensiveSlideLeftAnimKey);
-    addLegacy('slideRight', defensiveSlideRightAnimKey);
-
-    // Static sprite (no ball / shooting / defending fallback)
+    // Static sprite fallback
+    const spriteKey = charDef.sprites.staticKey;
     if (scene.textures.exists(spriteKey)) {
       this.staticSprite = scene.add.image(0, 0, spriteKey);
       this.staticSprite.setScale(SPRITE_SCALE);
@@ -124,7 +91,6 @@ export class PlayerRenderer {
     g.clear();
     this.shadow.clear();
 
-    // Tick flash timer
     if (this.flashTimer > 0) this.flashTimer -= 1 / 60;
 
     const isDefending = p.fsm.isInState(PLAYER_STATE.DEFENDING);
@@ -135,18 +101,16 @@ export class PlayerRenderer {
     const speed = p.velocity.length();
     const isMoving = speed > 10;
 
-    // Trigger flash on burst move start
     if ((isStepback || isCrossover) && p.stateTimer < 0.03) {
       this.flashTimer = 0.12;
     }
 
-    // For defense: determine if moving backward (away from facing) or forward/lateral
     let isMovingBackward = false;
     if (!p.hasBall && isMoving) {
       const faceDirX = Math.cos(p.facingAngle);
       const faceDirY = Math.sin(p.facingAngle);
       const dot = (p.velocity.x * faceDirX + p.velocity.y * faceDirY) / speed;
-      isMovingBackward = dot < -0.3; // moving away from who they're facing
+      isMovingBackward = dot < -0.3;
     }
 
     // Decide which animation to show (priority order)
@@ -165,20 +129,15 @@ export class PlayerRenderer {
     } else if (p.hasBall && !isMoving && this.sprites['idleDribble']) {
       activeId = 'idleDribble';
     } else if (!p.hasBall && isMoving && isMovingBackward && this.sprites['backpedal']) {
-      // No ball + moving backward → backpedal animation
       activeId = 'backpedal';
     } else if (!p.hasBall && isMoving && this.sprites['shuffle']) {
-      // No ball + moving forward/laterally → shuffle animation (looping)
       activeId = 'shuffle';
     } else if (!p.hasBall && isMoving && !this.sprites['shuffle'] && this.sprites['backpedal']) {
-      // Fallback: use backpedal for any no-ball movement if shuffle missing
       activeId = 'backpedal';
     } else if (!p.hasBall && !isMoving && this.sprites['shuffle']) {
-      // No ball + standing still → shuffle frame 0 (static defense stance)
       activeId = 'shuffle';
     }
 
-    // Hide ball during dribble anims, stepback (dead ball), jumpshot, and crossover
     this.isDribbleAnimActive = activeId === 'runDribble' || activeId === 'idleDribble' ||
       activeId === 'stepback' || activeId === 'jumpshot' || activeId === 'crossover';
 
@@ -202,40 +161,34 @@ export class PlayerRenderer {
       sprite.setVisible(true);
       sprite.setDepth(depthBase);
 
-      // Jumpshot uses jumpHeight offset
       const yOffset = activeId === 'jumpshot' ? p.jumpHeight : 0;
       sprite.setPosition(p.position.x, p.position.y - yOffset);
       sprite.setFlipX(Math.cos(p.facingAngle) < 0);
       sprite.setScale(ANIM_SCALE);
       sprite.setAlpha(1);
 
-      // Play/hold logic
       const anim = sprite.anims;
       if (activeId === 'jumpshot' || activeId === 'stepback' || activeId === 'crossover' || activeId === 'steal') {
-        // Play-once animations: play if not already started
         if (!anim.isPlaying && (!anim.currentAnim || anim.currentAnim.key !== key)) {
           sprite.play(key);
         }
       } else if (activeId === 'shuffle' && !isMoving) {
-        // Static defense stance: show frame 0 only (first frame of shuffle = idle defense)
         if (!anim.currentAnim || anim.currentAnim.key !== key) {
           sprite.play(key);
         }
         sprite.anims.pause(sprite.anims.currentFrame ?? undefined);
         sprite.setFrame(0);
       } else if (activeId === 'shuffle' && isMoving) {
-        // Moving forward/laterally in defense: loop shuffle
         if (!anim.isPlaying || anim.currentAnim?.key !== key) {
           sprite.play(key);
         }
       } else {
-        // Other looping animations (runDribble, idleDribble, backpedal)
         if (!anim.isPlaying || anim.currentAnim?.key !== key) {
           sprite.play(key);
         }
       }
 
-      // Defense ring (shown whenever player doesn't have the ball)
+      // Defense ring
       if (!p.hasBall) {
         const pulse = 0.4 + Math.sin(Date.now() * 0.006) * 0.2;
         g.lineStyle(2, 0xffff00, pulse);
@@ -245,7 +198,6 @@ export class PlayerRenderer {
       activeDisplayHeight = sprite.displayHeight;
 
     } else if (this.staticSprite) {
-      // Static sprite fallback (no ball, defending, shooting, etc.)
       this.staticSprite.setVisible(true);
       this.staticSprite.setDepth(depthBase);
       this.staticSprite.setPosition(p.position.x, p.position.y);
@@ -284,7 +236,6 @@ export class PlayerRenderer {
         g.strokeCircle(p.position.x, p.position.y - 15, PLAYER_RADIUS + 6);
       }
     } else {
-      // Fallback: colored circle
       let bodyColor = p.color;
       if (isShooting) bodyColor = 0xffaa00;
       if (isStealReach) bodyColor = 0xff4444;

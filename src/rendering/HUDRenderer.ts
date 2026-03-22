@@ -3,6 +3,8 @@ import { GameSimulation } from '../simulation/GameSimulation';
 import { GamePhase } from '../simulation/GameState';
 import { GAME_WIDTH, GAME_HEIGHT, SHOT_TIMING_WINDOW } from '../config/Constants';
 import { PLAYER_STATE } from '../simulation/PlayerStates';
+import { ThemeDef } from '../data/types';
+import { getTheme } from '../data/theme';
 
 // Positions matched to the scoreboard and feedback bar baked into court.webp
 const SCOREBOARD_X = GAME_WIDTH / 2;
@@ -23,16 +25,22 @@ export class HUDRenderer {
   private lastScores: [number, number] = [0, 0];
   private scorePopTimer: number = 0;
 
-  constructor(private scene: Phaser.Scene, private sim: GameSimulation) {
+  private theme: ThemeDef;
+
+  constructor(private scene: Phaser.Scene, private sim: GameSimulation, theme?: ThemeDef) {
+    this.theme = theme ?? getTheme();
+    const t = this.theme;
+
     // Dark background to cover the baked-in scoreboard in court image
-    this.scoreBackground = scene.add.rectangle(SCOREBOARD_X, SCOREBOARD_Y, 200, 48, 0x0a0a2a, 0.95)
+    this.scoreBackground = scene.add.rectangle(SCOREBOARD_X, SCOREBOARD_Y, 200, 48,
+      parseInt(t.colors.surface.replace('#', ''), 16), 0.95)
       .setDepth(100);
 
     // Score display - positioned over the built-in scoreboard
     this.scoreText = scene.add.text(SCOREBOARD_X, SCOREBOARD_Y, '', {
       fontSize: '32px',
-      fontFamily: 'monospace',
-      color: '#ffcc00',
+      fontFamily: t.fonts.score,
+      color: t.colors.primary,
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(101);
 
@@ -46,14 +54,15 @@ export class HUDRenderer {
     }).setOrigin(0.5).setDepth(101);
 
     // Feedback background - covers the built-in feedback bar
-    this.feedbackBackground = scene.add.rectangle(FEEDBACK_X, FEEDBACK_Y, 480, 40, 0x0a0a2a, 0.9)
+    this.feedbackBackground = scene.add.rectangle(FEEDBACK_X, FEEDBACK_Y, 480, 40,
+      parseInt(t.colors.surface.replace('#', ''), 16), 0.9)
       .setDepth(100);
 
     // Shot feedback - positioned over the built-in feedback bar
     this.shotFeedback = scene.add.text(FEEDBACK_X, FEEDBACK_Y, '', {
       fontSize: '18px',
-      fontFamily: 'monospace',
-      color: '#ffffff',
+      fontFamily: t.fonts.body,
+      color: t.colors.text,
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(101);
 
@@ -64,7 +73,7 @@ export class HUDRenderer {
     this.controlsText = scene.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 12,
       'WASD: Move | SPACE: Shoot | Q: Stepback | E: Crossover | F: Steal | SHIFT: Defend', {
       fontSize: '10px',
-      color: '#444444',
+      color: t.colors.textDim,
     }).setOrigin(0.5).setDepth(101);
   }
 
@@ -81,12 +90,12 @@ export class HUDRenderer {
 
     if (this.scorePopTimer > 0) {
       this.scorePopTimer -= dt;
-      const popScale = 1 + this.scorePopTimer * 0.6; // 1.15 → 1.0
+      const popScale = 1 + this.scorePopTimer * 0.6;
       this.scoreText.setScale(popScale);
       this.scoreText.setColor('#ffffff');
     } else {
       this.scoreText.setScale(1);
-      this.scoreText.setColor('#ffcc00');
+      this.scoreText.setColor(this.theme.colors.primary);
     }
     this.scoreText.setText(`${snap.scores[0]}  -  ${snap.scores[1]}`);
 
@@ -161,48 +170,61 @@ export class HUDRenderer {
       }
     }
 
-    // Timing meter (show when shooting)
+    // Timing meter (show when shooting) - Top center rectangle bar
     this.timingMeter.clear();
     const offense = this.sim.offensePlayer;
     if (offense.fsm.isInState(PLAYER_STATE.SHOOTING) && !offense.shotReleased) {
-      const meterX = offense.position.x - 25;
-      const meterY = offense.position.y - 50;
-      const meterW = 50;
-      const meterH = 8;
+      const meterW = 220;
+      const meterH = 24;
+      const meterX = (GAME_WIDTH - meterW) / 2;
+      const meterY = 12;
 
-      // Background
-      this.timingMeter.fillStyle(0x333333, 0.8);
+      // Outer border
+      this.timingMeter.lineStyle(3, 0x1a1a3a, 1);
+      this.timingMeter.fillStyle(0x0a0a2a, 0.9);
       this.timingMeter.fillRect(meterX, meterY, meterW, meterH);
+      this.timingMeter.strokeRect(meterX, meterY, meterW, meterH);
 
       // Fill based on timing
       const progress = Math.min(offense.stateTimer / SHOT_TIMING_WINDOW, 1);
 
-      // Smooth color gradient: red → orange → green → white (perfect)
-      let color = 0xff4444; // early
-      if (progress > 0.80 && progress < 0.92) color = 0x44ff44; // perfect zone
-      else if (progress > 0.65) color = 0x88ff44; // good zone
-      else if (progress > 0.45) color = 0xffaa00; // decent
+      let color = 0xff4444;
+      let alpha = 1;
+      if (progress > 0.80 && progress < 0.92) {
+        color = 0x44ff44;
+        alpha = 1;
+      } else if (progress > 0.65) {
+        color = 0x88ff44;
+        alpha = 0.95;
+      } else if (progress > 0.45) {
+        color = 0xffaa00;
+        alpha = 0.9;
+      }
 
-      this.timingMeter.fillStyle(color, 1);
-      this.timingMeter.fillRect(meterX, meterY, meterW * progress, meterH);
+      this.timingMeter.fillStyle(color, alpha);
+      this.timingMeter.fillRect(meterX + 2, meterY + 2, (meterW - 4) * progress, meterH - 4);
 
-      // Perfect zone marker with glow pulse
-      const perfectZone = 0.85;
-      const glowPulse = 0.6 + Math.sin(Date.now() * 0.01) * 0.3;
-      this.timingMeter.lineStyle(2, 0xffffff, glowPulse);
-      this.timingMeter.lineBetween(
-        meterX + meterW * perfectZone, meterY - 3,
-        meterX + meterW * perfectZone, meterY + meterH + 3,
-      );
-
-      // Perfect zone bracket
+      // Perfect zone highlight box
       const zoneStart = 0.80;
       const zoneEnd = 0.92;
-      this.timingMeter.lineStyle(1, 0xffffff, 0.3);
-      this.timingMeter.fillStyle(0xffffff, 0.08);
+      this.timingMeter.lineStyle(2, 0x44ff44, 0.4);
+      this.timingMeter.fillStyle(0x44ff44, 0.12);
       this.timingMeter.fillRect(
-        meterX + meterW * zoneStart, meterY,
-        meterW * (zoneEnd - zoneStart), meterH,
+        meterX + 2 + (meterW - 4) * zoneStart, meterY + 2,
+        (meterW - 4) * (zoneEnd - zoneStart), meterH - 4,
+      );
+      this.timingMeter.strokeRect(
+        meterX + 2 + (meterW - 4) * zoneStart, meterY + 2,
+        (meterW - 4) * (zoneEnd - zoneStart), meterH - 4,
+      );
+
+      // Perfect zone center marker with pulse
+      const perfectZone = 0.85;
+      const glowPulse = 0.5 + Math.sin(Date.now() * 0.012) * 0.5;
+      this.timingMeter.lineStyle(2, 0xffffff, glowPulse);
+      this.timingMeter.lineBetween(
+        meterX + 2 + (meterW - 4) * perfectZone, meterY,
+        meterX + 2 + (meterW - 4) * perfectZone, meterY + meterH,
       );
     }
   }
