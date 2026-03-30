@@ -179,8 +179,9 @@ export class HUDRenderer {
     if (offense.fsm.isInState(PLAYER_STATE.SHOOTING) && !offense.shotReleased) {
       const meterW = tm.size.width;
       const meterH = tm.size.height;
-      const meterX = tm.position.x;
-      const meterY = tm.position.y;
+      const spriteTopOffset = 180 * 1.1 * 0.97; // ~192px above player feet
+      const meterX = offense.position.x - meterW / 2;
+      const meterY = Math.max(8, offense.position.y - spriteTopOffset - 16);
 
       // Outer border
       this.timingMeter.lineStyle(3, tm.borderColor, 1);
