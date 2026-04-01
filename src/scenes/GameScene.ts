@@ -14,6 +14,7 @@ import { CourtRenderer } from '../rendering/CourtRenderer';
 import { PlayerRenderer } from '../rendering/PlayerRenderer';
 import { BallRenderer } from '../rendering/BallRenderer';
 import { HUDRenderer } from '../rendering/HUDRenderer';
+import { NetRenderer } from '../rendering/NetRenderer';
 import { AIController } from '../ai/AIController';
 
 export interface GameSceneData extends MatchConfig {}
@@ -26,6 +27,7 @@ export class GameScene extends Phaser.Scene {
   private courtRenderer!: CourtRenderer;
   private playerRenderers!: [PlayerRenderer, PlayerRenderer];
   private ballRenderer!: BallRenderer;
+  private netRenderer!: NetRenderer;
   private hudRenderer!: HUDRenderer;
 
   private aiController: AIController | null = null;
@@ -72,6 +74,7 @@ export class GameScene extends Phaser.Scene {
       new PlayerRenderer(this, this.sim.players[1], `P2 ${p2Char.name}`, p2Char, skin.playerEffects),
     ];
     this.ballRenderer = new BallRenderer(this, this.sim.ball, skin.ball);
+    this.netRenderer = new NetRenderer(this, this.sim.ball);
     this.hudRenderer = new HUDRenderer(this, this.sim, skin.hud);
 
     // Pause handling
@@ -108,6 +111,7 @@ export class GameScene extends Phaser.Scene {
     this.ballRenderer.hidden = this.sim.ball.state === 'held' &&
       this.playerRenderers[possessorIdx].isDribbleAnimActive;
     this.ballRenderer.update();
+    this.netRenderer.update(dt);
     this.hudRenderer.update(dt);
 
     // Game over → go to Result screen
