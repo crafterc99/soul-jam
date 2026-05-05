@@ -4,3 +4,6 @@ dist/
 .npm-cache/
 *.local
 .DS_Store
+.pip-cache/
+__pycache__/
+survey_output/
