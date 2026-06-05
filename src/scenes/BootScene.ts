@@ -1,7 +1,5 @@
 import Phaser from 'phaser';
 import { SCENE_BOOT, SCENE_PRELOAD, GAME_WIDTH, GAME_HEIGHT } from '../config/Constants';
-import { getActiveSkin } from '../data/skins';
-import { ScreenBackgroundRenderer } from '../rendering/ScreenBackgroundRenderer';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -9,47 +7,21 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // Load only the splash screen here so it shows immediately
-    this.load.image('loading-screen', 'assets/images/loading-screen.webp');
+    this.load.video('loading-video', 'assets/images/loading-screen.mp4', true);
   }
 
   create(): void {
-    const skin = getActiveSkin();
+    const video = this.add.video(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'loading-video');
+    video.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+    video.play();
 
-    // Show splash screen from skin
-    ScreenBackgroundRenderer.render(this, skin.screens.boot);
-
-    // "you are agenius" text
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.4, 'you are agenius', {
-      fontSize: '32px',
-      fontFamily: 'monospace',
-      color: '#ffcc00',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 4,
-    }).setOrigin(0.5);
-
-    // "PRESS START" overlay
-    const pressStart = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.82, 'PRESS START', {
-      fontSize: '36px',
-      fontFamily: 'monospace',
-      color: '#ffcc00',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 5,
-    }).setOrigin(0.5);
-
-    this.tweens.add({
-      targets: pressStart,
-      alpha: 0.2,
-      duration: 500,
-      yoyo: true,
-      repeat: -1,
-    });
-
-    // Wait for any key press to proceed
-    this.input.keyboard?.once('keydown', () => {
+    const advance = () => {
+      video.stop();
       this.scene.start(SCENE_PRELOAD);
-    });
+    };
+
+    video.on('complete', advance);
+    this.input.keyboard?.once('keydown', advance);
+    this.input.once('pointerdown', advance);
   }
 }
