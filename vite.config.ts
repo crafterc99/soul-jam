@@ -14,6 +14,7 @@ export default defineConfig({
   preview: {
     port: parseInt(process.env.PORT || '4173'),
     host: true,
+    allowedHosts: ['soul-jam-web-production.up.railway.app'],
   },
   build: {
     target: 'ES2020',
