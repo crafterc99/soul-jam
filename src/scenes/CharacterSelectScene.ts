@@ -272,11 +272,11 @@ export class CharacterSelectScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-RIGHT', () => this.navigate(1));
     this.input.keyboard?.on('keydown-SPACE', () => this.confirm());
     this.input.keyboard?.on('keydown-ENTER', () => this.confirm());
-    this.input.keyboard?.on('keydown-ESC', () => this.scene.start(SCENE_BOOT));
+    this.input.keyboard?.on('keydown-ESC', () => { this.removeVideo(); this.scene.start(SCENE_BOOT); });
 
     this.input.gamepad?.on('down', (_pad: Phaser.Input.Gamepad.Gamepad, button: Phaser.Input.Gamepad.Button) => {
       if (button.index === 0) this.confirm();
-      if (button.index === 1) this.scene.start(SCENE_BOOT);
+      if (button.index === 1) { this.removeVideo(); this.scene.start(SCENE_BOOT); }
       if (button.index === 14) this.navigate(-1);
       if (button.index === 15) this.navigate(1);
     });
@@ -360,6 +360,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       this.tweens.add({ targets: this.p1Tab?.nameText, alpha: 0.2, duration: 100, yoyo: true, repeat: 2 });
       return;
     }
+    this.removeVideo();
     this.scene.start(SCENE_COURT_SELECT, {
       mode: this.mode,
       p1CharacterId: this.characterIds[this.p1Selection],
@@ -367,8 +368,7 @@ export class CharacterSelectScene extends Phaser.Scene {
     });
   }
 
-  shutdown(): void {
-    if (this.highlightTween) { this.highlightTween.stop(); this.highlightTween = null; }
+  private removeVideo(): void {
     if (this.bgVideoEl) {
       this.bgVideoEl.pause();
       this.bgVideoEl.remove();
@@ -377,5 +377,10 @@ export class CharacterSelectScene extends Phaser.Scene {
     const canvas = this.sys.game.canvas;
     canvas.style.position = '';
     canvas.style.zIndex = '';
+  }
+
+  shutdown(): void {
+    if (this.highlightTween) { this.highlightTween.stop(); this.highlightTween = null; }
+    this.removeVideo();
   }
 }
