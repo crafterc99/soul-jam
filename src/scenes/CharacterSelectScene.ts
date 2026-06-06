@@ -7,26 +7,31 @@ interface SceneData {
   mode: 'cpu' | 'local2p';
 }
 
-// Layout
-const NUM_SLOTS = 6;
-const BOX_W = 148;
-const BOX_H = 174;
-const BOX_GAP = 16;
-const SLOTS_TOTAL_W = NUM_SLOTS * BOX_W + (NUM_SLOTS - 1) * BOX_GAP;  // 968
-const SLOTS_LEFT = (GAME_WIDTH - SLOTS_TOTAL_W) / 2;                    // 156
-const BOX_TOP = 490;
+// 3-group box grid
+const BOX_W = 60;
+const BOX_H = 73;
+const BOX_GAP = 8;
+const COLS = 6;
+const ROWS = 2;
+const GROUP_W = COLS * BOX_W + (COLS - 1) * BOX_GAP;   // 400
+const GROUP_GAP = 20;
+const GRID_LEFT = (GAME_WIDTH - 3 * GROUP_W - 2 * GROUP_GAP) / 2; // 20
+const ROW1_Y = 520;
+const ROW2_Y = ROW1_Y + BOX_H + BOX_GAP;                // 601
 
-const BAR_W = 108;
-const BAR_H = 8;
+// Group 2 (center) is the selectable roster
+const CENTER_GROUP_X = GRID_LEFT + GROUP_W + GROUP_GAP;  // 440
 
-// Stat grid: 2 rows x 3 cols, absolute coords
-const STAT_COLS = [548, 728, 908];
-const STAT_ROWS = [52, 80];
+// SOUL LVL tab dimensions
+const TAB_W = 400;
+const TAB_H = 78;
+const TAB_SKEW = 30;
 
-const STAT_KEYS = ['speed', 'power', 'range', 'defense', 'steal', 'clutchEnergy'] as const;
-const STAT_LABELS = ['SPD', 'PWR', 'RNG', 'DEF', 'STL', 'CLU'];
-
-type StatKey = typeof STAT_KEYS[number];
+interface SoulTab {
+  nameText: Phaser.GameObjects.Text;
+  barFill: Phaser.GameObjects.Rectangle;
+  barTrack: Phaser.GameObjects.Rectangle;
+}
 
 export class CharacterSelectScene extends Phaser.Scene {
   private mode: 'cpu' | 'local2p' = 'cpu';
@@ -36,14 +41,13 @@ export class CharacterSelectScene extends Phaser.Scene {
   private bgVideoEl: HTMLVideoElement | null = null;
   private gamepadNavTimer = 0;
 
-  // Updatable UI refs
-  private charNameText: Phaser.GameObjects.Text | null = null;
-  private charTitleText: Phaser.GameObjects.Text | null = null;
-  private soulRatingText: Phaser.GameObjects.Text | null = null;
-  private statFills: { fill: Phaser.GameObjects.Rectangle; val: Phaser.GameObjects.Text }[] = [];
-  private boxImages: (Phaser.GameObjects.Image | null)[] = [];
-  private boxHighlights: Phaser.GameObjects.Rectangle[] = [];
+  private p1Tab: SoulTab | null = null;
+  private p2Tab: SoulTab | null = null;
+  private centerImages: (Phaser.GameObjects.Image | null)[] = [];
+  private centerHighlights: Phaser.GameObjects.Rectangle[] = [];
   private highlightTween: Phaser.Tweens.Tween | null = null;
+  private centerDiamond: Phaser.GameObjects.Graphics | null = null;
+  private diamondText: Phaser.GameObjects.Text | null = null;
 
   constructor() {
     super({ key: SCENE_CHARACTER_SELECT });
@@ -58,7 +62,7 @@ export class CharacterSelectScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Place DOM video behind canvas
+    // DOM video — try with audio, fall back to muted if autoplay blocked
     const canvas = this.sys.game.canvas;
     canvas.style.position = 'relative';
     canvas.style.zIndex = '2';
@@ -67,153 +71,189 @@ export class CharacterSelectScene extends Phaser.Scene {
     vid.src = 'assets/images/char-select-bg.mp4';
     vid.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;object-fit:cover;z-index:1;pointer-events:none';
     vid.loop = true;
-    vid.muted = true;
+    vid.muted = false;
     vid.playsInline = true;
     this.bgVideoEl = vid;
     document.body.appendChild(vid);
-    vid.play().catch(() => {});
+    vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
 
-    this.buildPanel();
-    this.buildBoxes();
+    this.buildSoulTabs();
+    this.buildBoxGrid();
     this.buildPressStart();
     this.bindInput();
     this.refreshUI();
   }
 
-  private buildPanel(): void {
+  // ── SOUL LVL TABS ──────────────────────────────────────────────
+
+  private buildSoulTabs(): void {
     const D = 100;
 
-    // Frosted dark panel spanning top of screen
-    this.add.rectangle(GAME_WIDTH / 2, 90, 1240, 152, 0x06060f, 0.84).setDepth(D);
+    // P1 tab — left corner, right edge angled
+    const g1 = this.add.graphics().setDepth(D);
+    this.drawTab(g1, 8, 8, TAB_W, TAB_H, TAB_SKEW, false, 0x090912, 0.88);
 
-    // Subtle top + bottom edge lines
-    this.add.rectangle(GAME_WIDTH / 2, 14, 1240, 1, 0x3a3a5c, 0.6).setDepth(D + 1);
-    this.add.rectangle(GAME_WIDTH / 2, 166, 1240, 1, 0x3a3a5c, 0.3).setDepth(D + 1);
-
-    // Vertical dividers
-    this.add.rectangle(405, 90, 1, 130, 0x333355, 0.5).setDepth(D + 1);
-    this.add.rectangle(545, 90, 1, 130, 0x333355, 0.5).setDepth(D + 1);
-
-    // ── LEFT: character name + title ──
-    this.charNameText = this.add.text(54, 50, '', {
-      fontSize: '36px',
-      fontFamily: '"Helvetica Neue",Helvetica,Arial,sans-serif',
-      fontStyle: 'bold',
-      color: '#ffffff',
-    }).setDepth(D + 2);
-
-    this.charTitleText = this.add.text(54, 97, '', {
-      fontSize: '13px',
-      fontFamily: '"Helvetica Neue",Helvetica,Arial,sans-serif',
-      color: '#8888aa',
-      fontStyle: 'italic',
-    }).setDepth(D + 2);
-
-    // ── MIDDLE: soul rating ──
-    this.add.text(419, 36, 'SOUL', {
+    this.add.text(28, 18, 'SOUL LVL', {
       fontSize: '9px',
       fontFamily: '"Helvetica Neue",Helvetica,Arial,sans-serif',
-      color: '#555566',
+      color: '#555572',
       letterSpacing: 4,
-    }).setDepth(D + 2);
+    }).setDepth(D + 1);
 
-    this.soulRatingText = this.add.text(419, 50, '', {
-      fontSize: '42px',
+    const p1Name = this.add.text(28, 30, '', {
+      fontSize: '22px',
       fontFamily: '"Helvetica Neue",Helvetica,Arial,sans-serif',
       fontStyle: 'bold',
       color: '#ffffff',
-    }).setDepth(D + 2);
+    }).setDepth(D + 1);
 
-    // ── RIGHT: stat bars ──
-    this.statFills = [];
+    const p1Track = this.add.rectangle(28 + 165, 68, 165, 5, 0x1c1c30).setDepth(D + 1);
+    const p1Fill = this.add.rectangle(28, 68, 0, 5, 0xffffff).setOrigin(0, 0.5).setDepth(D + 2);
 
-    STAT_KEYS.forEach((key, i) => {
-      void key; // key used in refreshUI, not here
-      const col = i % 3;
-      const row = Math.floor(i / 3);
-      const sx = STAT_COLS[col];
-      const sy = STAT_ROWS[row];
+    this.p1Tab = { nameText: p1Name, barFill: p1Fill, barTrack: p1Track };
 
-      this.add.text(sx, sy, STAT_LABELS[i], {
-        fontSize: '9px',
-        fontFamily: '"Helvetica Neue",Helvetica,Arial,sans-serif',
-        color: '#555566',
-        letterSpacing: 1,
-      }).setDepth(D + 2);
+    // P2 tab — right corner, left edge angled (mirrored)
+    const g2 = this.add.graphics().setDepth(D);
+    this.drawTab(g2, GAME_WIDTH - 8 - TAB_W, 8, TAB_W, TAB_H, TAB_SKEW, true, 0x090912, 0.88);
 
-      // Bar track
-      this.add.rectangle(sx + 33 + BAR_W / 2, sy + 7, BAR_W, BAR_H, 0x18182a).setDepth(D + 2);
+    this.add.text(GAME_WIDTH - 28, 18, 'SOUL LVL', {
+      fontSize: '9px',
+      fontFamily: '"Helvetica Neue",Helvetica,Arial,sans-serif',
+      color: '#555572',
+      letterSpacing: 4,
+    }).setOrigin(1, 0).setDepth(D + 1);
 
-      // Bar fill — origin (0, 0.5) so it grows right from the left edge
-      const fill = this.add.rectangle(sx + 33, sy + 7, 1, BAR_H, 0x4466ff)
-        .setOrigin(0, 0.5)
-        .setDepth(D + 3);
+    const p2Name = this.add.text(GAME_WIDTH - 28, 30, '', {
+      fontSize: '22px',
+      fontFamily: '"Helvetica Neue",Helvetica,Arial,sans-serif',
+      fontStyle: 'bold',
+      color: '#ffffff',
+    }).setOrigin(1, 0).setDepth(D + 1);
 
-      const val = this.add.text(sx + 33 + BAR_W + 6, sy + 1, '', {
-        fontSize: '10px',
-        fontFamily: '"Helvetica Neue",Helvetica,Arial,sans-serif',
-        color: '#aaaacc',
-      }).setDepth(D + 2);
+    const BAR_W = 165;
+    const barRight = GAME_WIDTH - 28;
+    const p2Track = this.add.rectangle(barRight - BAR_W / 2, 68, BAR_W, 5, 0x1c1c30).setDepth(D + 1);
+    const p2Fill = this.add.rectangle(barRight, 68, 0, 5, 0xffffff).setOrigin(1, 0.5).setDepth(D + 2);
 
-      this.statFills.push({ fill, val });
-    });
+    this.p2Tab = { nameText: p2Name, barFill: p2Fill, barTrack: p2Track };
   }
 
-  private buildBoxes(): void {
-    this.boxImages = [];
-    this.boxHighlights = [];
-
-    for (let i = 0; i < NUM_SLOTS; i++) {
-      const cx = SLOTS_LEFT + i * (BOX_W + BOX_GAP) + BOX_W / 2;
-      const cy = BOX_TOP + BOX_H / 2;
-      const charId = this.characterIds[i] ?? null;
-      const charDef = charId ? CHARACTERS[charId] : null;
-
-      // Box backing
-      this.add.rectangle(cx, cy, BOX_W, BOX_H, charDef ? 0x0e0e1c : 0x080810, charDef ? 0.85 : 0.6)
-        .setDepth(100);
-
-      // Portrait image or empty slot
-      let img: Phaser.GameObjects.Image | null = null;
-      if (charDef && this.textures.exists(charDef.assets.selectBg)) {
-        img = this.add.image(cx, cy, charDef.assets.selectBg)
-          .setDisplaySize(BOX_W, BOX_H)
-          .setDepth(101)
-          .setAlpha(0.55);
-      } else if (!charDef) {
-        // Empty slot
-        this.add.rectangle(cx, cy, BOX_W, BOX_H, 0x111120, 0.4).setDepth(101);
-        this.add.text(cx, cy - 6, '+', {
-          fontSize: '24px',
-          fontFamily: 'Arial',
-          color: '#1e1e30',
-        }).setOrigin(0.5).setDepth(102);
-      }
-      this.boxImages.push(img);
-
-      // Character name below box
-      if (charDef) {
-        this.add.text(cx, BOX_TOP + BOX_H + 8, charDef.name, {
-          fontSize: '11px',
-          fontFamily: '"Helvetica Neue",Helvetica,Arial,sans-serif',
-          color: '#666677',
-          letterSpacing: 2,
-        }).setOrigin(0.5).setDepth(103);
-      }
-
-      // Selection highlight border
-      const h = this.add.rectangle(cx, cy, BOX_W + 5, BOX_H + 5)
-        .setStrokeStyle(2.5, 0xffffff)
-        .setFillStyle(0xffffff, 0.04)
-        .setDepth(104)
-        .setAlpha(0);
-      this.boxHighlights.push(h);
+  private drawTab(
+    g: Phaser.GameObjects.Graphics,
+    x: number, y: number,
+    w: number, h: number,
+    skew: number,
+    mirrored: boolean,
+    fillColor: number,
+    fillAlpha: number
+  ): void {
+    let pts: { x: number; y: number }[];
+    if (!mirrored) {
+      pts = [
+        { x: x, y: y },
+        { x: x + w - skew, y: y },
+        { x: x + w, y: y + h },
+        { x: x, y: y + h },
+      ];
+    } else {
+      pts = [
+        { x: x + skew, y: y },
+        { x: x + w, y: y },
+        { x: x + w, y: y + h },
+        { x: x, y: y + h },
+      ];
     }
+    g.fillStyle(fillColor, fillAlpha);
+    g.fillPoints(pts, true);
+    g.lineStyle(1, 0x333355, 0.6);
+    g.strokePoints(pts, true);
   }
+
+  // ── BOX GRID ───────────────────────────────────────────────────
+
+  private buildBoxGrid(): void {
+    const D = 100;
+
+    // Draw all three groups
+    for (let group = 0; group < 3; group++) {
+      const gx = GRID_LEFT + group * (GROUP_W + GROUP_GAP);
+      const isCenter = group === 1;
+
+      for (let row = 0; row < ROWS; row++) {
+        const by = row === 0 ? ROW1_Y : ROW2_Y;
+
+        for (let col = 0; col < COLS; col++) {
+          const cx = gx + col * (BOX_W + BOX_GAP) + BOX_W / 2;
+          const cy = by + BOX_H / 2;
+          const slotIdx = row * COLS + col;
+
+          // Background
+          this.add.rectangle(cx, cy, BOX_W, BOX_H, 0x0a0a18, 0.85).setDepth(D);
+
+          // Thin border
+          this.add.rectangle(cx, cy, BOX_W, BOX_H)
+            .setStrokeStyle(1, 0x222235, 0.7)
+            .setFillStyle(0, 0)
+            .setDepth(D + 1);
+
+          if (isCenter) {
+            const charId = this.characterIds[slotIdx] ?? null;
+            const charDef = charId ? CHARACTERS[charId] : null;
+
+            let img: Phaser.GameObjects.Image | null = null;
+            if (charDef && this.textures.exists(charDef.assets.selectBg)) {
+              img = this.add.image(cx, cy, charDef.assets.selectBg)
+                .setDisplaySize(BOX_W, BOX_H)
+                .setDepth(D + 2)
+                .setAlpha(0.55);
+            }
+            this.centerImages.push(img);
+
+            // Highlight border (initially hidden)
+            const h = this.add.rectangle(cx, cy, BOX_W + 4, BOX_H + 4)
+              .setStrokeStyle(2, 0xffffff)
+              .setFillStyle(0xffffff, 0.05)
+              .setDepth(D + 3)
+              .setAlpha(0);
+            this.centerHighlights.push(h);
+          }
+        }
+      }
+    }
+
+    // Center diamond selector — sits between the two center rows
+    const diamondX = GAME_WIDTH / 2;
+    const diamondY = ROW1_Y + BOX_H + BOX_GAP / 2;  // between rows
+
+    this.centerDiamond = this.add.graphics().setDepth(110);
+    this.diamondText = this.add.text(diamondX, diamondY, '?', {
+      fontSize: '14px',
+      fontFamily: '"Helvetica Neue",Helvetica,Arial,sans-serif',
+      color: '#aaaacc',
+    }).setOrigin(0.5).setDepth(111);
+
+    this.drawDiamond(this.centerDiamond, diamondX, diamondY, 22, 0x111124);
+  }
+
+  private drawDiamond(g: Phaser.GameObjects.Graphics, cx: number, cy: number, size: number, fillColor: number): void {
+    g.clear();
+    const pts = [
+      { x: cx, y: cy - size },
+      { x: cx + size * 0.7, y: cy },
+      { x: cx, y: cy + size },
+      { x: cx - size * 0.7, y: cy },
+    ];
+    g.fillStyle(fillColor, 0.92);
+    g.fillPoints(pts, true);
+    g.lineStyle(1.5, 0x4444aa, 0.8);
+    g.strokePoints(pts, true);
+  }
+
+  // ── PRESS START ────────────────────────────────────────────────
 
   private buildPressStart(): void {
-    const ps = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 18, 'PRESS START', {
-      fontSize: '18px',
+    const ps = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 16, 'PRESS START', {
+      fontSize: '17px',
       fontFamily: '"Helvetica Neue",Helvetica,Arial,sans-serif',
       fontStyle: 'bold',
       color: '#ffffff',
@@ -222,6 +262,8 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     this.tweens.add({ targets: ps, alpha: 0.15, duration: 700, yoyo: true, repeat: -1 });
   }
+
+  // ── INPUT ──────────────────────────────────────────────────────
 
   private bindInput(): void {
     this.input.keyboard?.on('keydown-A', () => this.navigate(-1));
@@ -240,52 +282,58 @@ export class CharacterSelectScene extends Phaser.Scene {
     });
   }
 
+  // ── REFRESH ────────────────────────────────────────────────────
+
   private refreshUI(): void {
-    const charId = this.characterIds[this.p1Selection];
-    const charDef = CHARACTERS[charId];
-    if (!charDef) return;
+    const p1Id = this.characterIds[this.p1Selection];
+    const p1Def = p1Id ? CHARACTERS[p1Id] : null;
+    const p2Id = this.characterIds[this.p2Selection];
+    const p2Def = p2Id ? CHARACTERS[p2Id] : null;
 
-    // Update name + title
-    this.charNameText?.setText(charDef.name);
-    this.charTitleText?.setText(charDef.title.toUpperCase());
+    if (p1Def && this.p1Tab) {
+      const r = p1Def.ratings;
+      const soul = Math.round((r.speed + r.power + r.range + r.defense + r.steal + r.clutchEnergy) / 6);
+      this.p1Tab.nameText.setText(p1Def.name);
+      const BAR_MAX = 165;
+      const fillW = (soul / 100) * BAR_MAX;
+      this.p1Tab.barFill.setDisplaySize(fillW, 5);
+      this.p1Tab.barFill.setFillStyle(p1Def.color);
+    }
 
-    // Soul rating (average of all 6)
-    const r = charDef.ratings;
-    const soul = Math.round(
-      (r.speed + r.power + r.range + r.defense + r.steal + r.clutchEnergy) / 6
-    );
-    this.soulRatingText?.setText(`${soul}`);
-
-    // Stat bars — use character color for fill
-    const barColor = charDef.color;
-    STAT_KEYS.forEach((key: StatKey, i) => {
-      const v = r[key];
-      const fw = Math.max(1, (v / 100) * BAR_W);
-      const { fill, val } = this.statFills[i];
-      fill.setDisplaySize(fw, BAR_H);
-      fill.setFillStyle(barColor);
-      val.setText(`${v}`);
-    });
+    if (p2Def && this.p2Tab) {
+      const r = p2Def.ratings;
+      const soul = Math.round((r.speed + r.power + r.range + r.defense + r.steal + r.clutchEnergy) / 6);
+      this.p2Tab.nameText.setText(p2Def.name);
+      const BAR_MAX = 165;
+      const fillW = (soul / 100) * BAR_MAX;
+      this.p2Tab.barFill.setDisplaySize(fillW, 5);
+      this.p2Tab.barFill.setFillStyle(p2Def.color);
+    }
 
     // Box image alphas
-    this.boxImages.forEach((img, i) => img?.setAlpha(i === this.p1Selection ? 1 : 0.55));
+    this.centerImages.forEach((img, i) => img?.setAlpha(i === this.p1Selection ? 1 : 0.5));
 
-    // Box highlight: kill old tween, reset all, pulse selected
-    if (this.highlightTween) {
-      this.highlightTween.stop();
-      this.highlightTween = null;
-    }
-    this.boxHighlights.forEach((h, i) => h.setAlpha(i === this.p1Selection ? 1 : 0));
-    if (this.boxHighlights[this.p1Selection]) {
+    // Highlight animation
+    if (this.highlightTween) { this.highlightTween.stop(); this.highlightTween = null; }
+    this.centerHighlights.forEach((h, i) => h.setAlpha(i === this.p1Selection ? 1 : 0));
+    const selHighlight = this.centerHighlights[this.p1Selection];
+    if (selHighlight) {
       this.highlightTween = this.tweens.add({
-        targets: this.boxHighlights[this.p1Selection],
-        alpha: { from: 0.6, to: 1 },
-        duration: 900,
+        targets: selHighlight,
+        alpha: { from: 0.5, to: 1 },
+        duration: 850,
         yoyo: true,
         repeat: -1,
       });
     }
+
+    // Diamond shows selected character name
+    if (p1Def && this.diamondText) {
+      this.diamondText.setText(p1Def.name.substring(0, 2).toUpperCase());
+    }
   }
+
+  // ── GAME LOOP ──────────────────────────────────────────────────
 
   update(_time: number, delta: number): void {
     if (this.gamepadNavTimer > 0) { this.gamepadNavTimer -= delta; return; }
@@ -309,7 +357,7 @@ export class CharacterSelectScene extends Phaser.Scene {
     const charId = this.characterIds[this.p1Selection];
     const storage = getStorageService();
     if (!storage.isCharacterUnlocked(charId) && !CHARACTERS[charId]?.unlocked) {
-      this.tweens.add({ targets: this.charNameText, alpha: 0.2, duration: 100, yoyo: true, repeat: 2 });
+      this.tweens.add({ targets: this.p1Tab?.nameText, alpha: 0.2, duration: 100, yoyo: true, repeat: 2 });
       return;
     }
     this.scene.start(SCENE_COURT_SELECT, {

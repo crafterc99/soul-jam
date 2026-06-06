@@ -63,6 +63,7 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.cameras.main.setBackgroundColor('#1a1a2e');
     // Create all animations from character definitions (data-driven)
     AnimationLoader.createAllAnimations(this, Object.values(CHARACTERS));
 

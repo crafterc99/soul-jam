@@ -20,7 +20,7 @@ export class BootScene extends Phaser.Scene {
     vid.src = 'assets/images/loading-screen.mp4';
     vid.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;object-fit:cover;z-index:9999;background:#000';
     vid.playsInline = true;
-    vid.muted = true;
+    vid.muted = false;
     this.videoEl = vid;
     document.body.appendChild(vid);
 
@@ -59,7 +59,7 @@ export class BootScene extends Phaser.Scene {
     document.addEventListener('keydown', advance, { once: true });
     document.addEventListener('pointerdown', advance, { once: true });
 
-    vid.play().catch(() => {});
+    vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
   }
 
   shutdown(): void {

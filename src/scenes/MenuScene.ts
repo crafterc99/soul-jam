@@ -10,6 +10,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.cameras.main.setBackgroundColor('#1a1a2e');
     const theme = getTheme();
     const skin = getActiveSkin();
 

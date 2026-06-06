@@ -43,6 +43,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.cameras.main.setBackgroundColor('#1a1a2e');
     const p1Char = CHARACTERS[this.matchConfig.p1CharacterId];
     const p2Char = CHARACTERS[this.matchConfig.p2CharacterId];
     const skin = getActiveSkin();
