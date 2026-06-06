@@ -16,7 +16,7 @@ export function createGameConfig(): Phaser.Types.Core.GameConfig {
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
     parent: 'game-container',
-    backgroundColor: '#1a1a2e',
+    transparent: true,
     scene: [
       BootScene,
       PreloadScene,
