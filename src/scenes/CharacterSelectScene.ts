@@ -89,8 +89,9 @@ export class CharacterSelectScene extends Phaser.Scene {
   }
 
   create(): void {
-    // No camera background — video shows through the transparent canvas
-    this.cameras.main.setBackgroundColor(0x00000000);
+    // Transparent: GameConfig has transparent:true, so no camera background needed.
+    // Calling setBackgroundColor with a hex number hardcodes alpha=1 (opaque), so don't call it.
+    this.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
 
     this.startVideo();
     this.buildPortraits();     // depth 0 — behind everything
