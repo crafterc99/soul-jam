@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { SCENE_BOOT, SCENE_PRELOAD } from '../config/Constants';
+import { loadDeployedRegistry } from '../data/DeployedCharacters';
 
 export class BootScene extends Phaser.Scene {
   private videoEl: HTMLVideoElement | null = null;
@@ -36,12 +37,13 @@ export class BootScene extends Phaser.Scene {
     this.overlayEl = label;
     document.body.appendChild(label);
 
-    const advance = () => {
+    const advance = async () => {
       if (!this.videoEl) return;
       this.videoEl.pause();
       this.videoEl.remove();
       this.videoEl = null;
       if (this.overlayEl) { this.overlayEl.remove(); this.overlayEl = null; }
+      await loadDeployedRegistry();
       this.scene.start(SCENE_PRELOAD);
     };
 

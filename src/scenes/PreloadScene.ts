@@ -5,6 +5,7 @@ import { COURTS } from '../data/courts';
 import { buildAssetRegistry } from '../services/AssetRegistry';
 import { AnimationLoader } from '../rendering/AnimationLoader';
 import { getActiveSkin } from '../data/skins';
+import { getDeployedCharacters } from '../data/DeployedCharacters';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -60,12 +61,44 @@ export class PreloadScene extends Phaser.Scene {
     this.load.spritesheet('breezy-defensive-slide-right', 'assets/images/breezy-defensive-slide-right.png', {
       frameWidth: 480, frameHeight: 717,
     });
+
+    // Load spritesheets for characters deployed from Sprite Factory
+    const deployed = getDeployedCharacters();
+    for (const [charId, charEntry] of Object.entries(deployed)) {
+      if (CHARACTERS[charId]) continue; // Hardcoded chars already handled above
+      const frameConfig = { frameWidth: charEntry.spriteSize, frameHeight: charEntry.spriteSize };
+      for (const animDef of Object.values(charEntry.animations)) {
+        if (!this.textures.exists(animDef.textureKey)) {
+          this.load.spritesheet(animDef.textureKey, `assets/images/${animDef.textureKey}.png`, frameConfig);
+        }
+      }
+    }
   }
 
   create(): void {
     this.cameras.main.setBackgroundColor('#1a1a2e');
     // Create all animations from character definitions (data-driven)
     AnimationLoader.createAllAnimations(this, Object.values(CHARACTERS));
+
+    // Create animations for characters deployed from Sprite Factory
+    const deployed = getDeployedCharacters();
+    for (const [charId, charEntry] of Object.entries(deployed)) {
+      if (CHARACTERS[charId]) continue;
+      for (const animDef of Object.values(charEntry.animations)) {
+        const animKey = `${animDef.textureKey}-anim`;
+        if (this.anims.exists(animKey) || !this.textures.exists(animDef.textureKey)) continue;
+        this.anims.create({
+          key: animKey,
+          frames: this.anims.generateFrameNumbers(animDef.textureKey, {
+            start: animDef.startFrame,
+            end: animDef.endFrame,
+          }),
+          frameRate: animDef.fps,
+          repeat: animDef.repeat,
+        });
+      }
+      console.log(`[SpriteFactory] Registered animations for deployed character: ${charId}`);
+    }
 
     // Legacy defense slides
     this.anims.create({
