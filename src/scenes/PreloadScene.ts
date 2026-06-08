@@ -5,7 +5,7 @@ import { COURTS } from '../data/courts';
 import { buildAssetRegistry } from '../services/AssetRegistry';
 import { AnimationLoader } from '../rendering/AnimationLoader';
 import { getActiveSkin } from '../data/skins';
-import { getDeployedCharacters } from '../data/DeployedCharacters';
+import { getDeployedCharacters, DeployedAnimDef } from '../data/DeployedCharacters';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -67,9 +67,11 @@ export class PreloadScene extends Phaser.Scene {
     for (const [charId, charEntry] of Object.entries(deployed)) {
       if (CHARACTERS[charId]) continue; // Hardcoded chars already handled above
       const frameConfig = { frameWidth: charEntry.spriteSize, frameHeight: charEntry.spriteSize };
-      for (const animDef of Object.values(charEntry.animations)) {
+      for (const animDef of Object.values(charEntry.animations) as DeployedAnimDef[]) {
         if (!this.textures.exists(animDef.textureKey)) {
-          this.load.spritesheet(animDef.textureKey, `assets/images/${animDef.textureKey}.png`, frameConfig);
+          // Use R2 URL when available (cross-domain Railway → R2), else fall back to local copy
+          const src = animDef.url || `assets/images/${animDef.textureKey}.png`;
+          this.load.spritesheet(animDef.textureKey, src, frameConfig);
         }
       }
     }
