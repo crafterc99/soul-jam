@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { PlayerSim } from '../simulation/PlayerSim';
-import { PLAYER_RADIUS } from '../config/Constants';
+import { PLAYER_RADIUS, PLAYER_SCALE } from '../config/Constants';
 import { PLAYER_STATE } from '../simulation/PlayerStates';
 import { CharacterDef } from '../data/types';
 import { PlayerEffectsSkinDef } from '../data/skins/types';
@@ -37,8 +37,8 @@ export class PlayerRenderer {
       scales: { base: 0.055, anim: 1.1, defenseSlide: 0.197 },
     };
 
-    const SPRITE_SCALE = this.effects.scales.base;
-    const ANIM_SCALE = this.effects.scales.anim;
+    const SPRITE_SCALE = this.effects.scales.base * PLAYER_SCALE;
+    const ANIM_SCALE = this.effects.scales.anim * PLAYER_SCALE;
 
     this.shadow = scene.add.graphics().setDepth(5);
     this.graphics = scene.add.graphics().setDepth(10);
@@ -100,8 +100,8 @@ export class PlayerRenderer {
     const p = this.player;
     const g = this.graphics;
     const fx = this.effects;
-    const SPRITE_SCALE = fx.scales.base;
-    const ANIM_SCALE = fx.scales.anim;
+    const SPRITE_SCALE = fx.scales.base * PLAYER_SCALE;
+    const ANIM_SCALE = fx.scales.anim * PLAYER_SCALE;
 
     g.clear();
     this.shadow.clear();

@@ -15,6 +15,7 @@ import { PlayerRenderer } from '../rendering/PlayerRenderer';
 import { BallRenderer } from '../rendering/BallRenderer';
 import { HUDRenderer } from '../rendering/HUDRenderer';
 import { NetRenderer } from '../rendering/NetRenderer';
+import { HoopRenderer } from '../rendering/HoopRenderer';
 import { AIController } from '../ai/AIController';
 
 export interface GameSceneData extends MatchConfig {}
@@ -28,6 +29,7 @@ export class GameScene extends Phaser.Scene {
   private playerRenderers!: [PlayerRenderer, PlayerRenderer];
   private ballRenderer!: BallRenderer;
   private netRenderer!: NetRenderer;
+  private hoopRenderer!: HoopRenderer;
   private hudRenderer!: HUDRenderer;
 
   private aiController: AIController | null = null;
@@ -76,6 +78,7 @@ export class GameScene extends Phaser.Scene {
     ];
     this.ballRenderer = new BallRenderer(this, this.sim.ball, skin.ball);
     this.netRenderer = new NetRenderer(this, this.sim.ball);
+    this.hoopRenderer = new HoopRenderer(this, skin.hoop, this.sim.ball);
     this.hudRenderer = new HUDRenderer(this, this.sim, skin.hud);
 
     // Pause handling
@@ -113,6 +116,7 @@ export class GameScene extends Phaser.Scene {
       this.playerRenderers[possessorIdx].isDribbleAnimActive;
     this.ballRenderer.update();
     this.netRenderer.update(dt);
+    this.hoopRenderer.update(dt);
     this.hudRenderer.update(dt);
 
     // Game over → go to Result screen

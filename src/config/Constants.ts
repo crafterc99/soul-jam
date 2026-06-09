@@ -25,6 +25,22 @@ export const THREE_POINT_CENTER_X = HOOP_X;
 export const THREE_POINT_CENTER_Y = HOOP_Y;
 export const THREE_POINT_RADIUS = 575;
 
+// Global player scale — single knob for how big players render across the
+// whole game. Multiplies every skin's player scales (base and anim).
+// Runtime override without rebuilding: set localStorage 'soulJam.playerScale'
+// to a number (e.g. 1.25) and reload.
+export const PLAYER_SCALE = (() => {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const v = parseFloat(localStorage.getItem('soulJam.playerScale') ?? '');
+      if (Number.isFinite(v) && v > 0.05 && v < 20) return v;
+    }
+  } catch {
+    // no storage available (tests / SSR) — use default
+  }
+  return 1.0;
+})();
+
 // Player physics
 export const PLAYER_RADIUS = 20;
 export const DECELERATION = 1400;
