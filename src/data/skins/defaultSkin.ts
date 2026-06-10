@@ -21,14 +21,13 @@ export const DEFAULT_SKIN: SkinBundle = {
   },
 
   // ─── Hoop ──────────────────────────────────────────────────────
-  // Palette matched to the reference hoop art (orange rim/border, slate pole)
   hoop: {
     id: 'default-hoop',
     colors: {
-      rim: 0xe8772a,
+      rim: 0xff4400,
       net: 0xffffff,
-      backboard: 0xe0512f,
-      stanchion: 0x5d6470,
+      backboard: 0x333333,
+      stanchion: 0x666666,
     },
   },
 

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { CharacterDef } from '../data/types';
+import { ANIM_SPEED } from '../config/Constants';
 
 export class AnimationLoader {
   /**
@@ -25,7 +26,7 @@ export class AnimationLoader {
           start: animDef.startFrame,
           end: animDef.endFrame,
         }),
-        frameRate: animDef.fps,
+        frameRate: animDef.fps * ANIM_SPEED, // game-wide animation speed knob
         repeat: animDef.repeat,
         hideOnComplete: false,
       });

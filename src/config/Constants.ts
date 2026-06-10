@@ -41,6 +41,23 @@ export const PLAYER_SCALE = (() => {
   return 1.0;
 })();
 
+// Global animation speed — single knob for how fast every character animation
+// plays across the whole game. Multiplies each animation's fps when Phaser
+// animations are created (AnimationLoader).
+// Runtime override without rebuilding: set localStorage 'soulJam.animSpeed'
+// to a number (e.g. 1.5) and reload.
+export const ANIM_SPEED = (() => {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const v = parseFloat(localStorage.getItem('soulJam.animSpeed') ?? '');
+      if (Number.isFinite(v) && v > 0.05 && v < 20) return v;
+    }
+  } catch {
+    // no storage available (tests / SSR) — use default
+  }
+  return 1.0;
+})();
+
 // Player physics
 export const PLAYER_RADIUS = 20;
 export const DECELERATION = 1400;
